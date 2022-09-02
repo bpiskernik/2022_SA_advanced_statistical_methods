@@ -1,0 +1,9 @@
+"0","bimodal <- tibble(data=FamilyRank::rbinorm(1000, -1, 1, .4, .4, .5))"
+"0","p <- ggplot(bimodal, aes(data)) +"
+"0","  geom_histogram(bins = 40) +"
+"0","  geom_vline(aes(xintercept = mean(bimodal$data)),col='red',size=2)"
+"0",""
+"0","ggplotly(p)"
+"2","Warning: Use of `bimodal$data` is discouraged. Use `data` instead."
+"2","Warning: `gather_()` was deprecated in tidyr 1.2.0.
+Please use `gather()` instead."
