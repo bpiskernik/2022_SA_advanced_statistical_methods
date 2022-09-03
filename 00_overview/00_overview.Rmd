@@ -1,0 +1,68 @@
+---
+title: "Advanced statistical methods | UE-L25.01477"
+author: "Bernhard Piskernik"
+date: "2022/09/22"
+output: 
+  ioslides_presentation:
+        css: ../style.css
+        incremental: true
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(plotly)
+library(kableExtra)
+options(warn=-1)
+```
+
+## Objectives of this course {.build}
+
+* refresh your statistical knowledge
+* learn some new methods and techniques
+* compare different methods for the same problem
+* discuss how to decide on the best statistical method for the given problem
+* see some statistical analyses in action
+
+
+## Rules
+
+* if you have a question - ask!
+* don't expect me to be able to give a clear-cut answer (each time)
+
+
+## Topics
+
+* mean differences of groups
+* nested data
+* dimensionality reduction
+* finding groups in data
+
+
+## Procedure
+
+* I have prepared some slides
+  - with information
+  - with analyses
+  - (all slides are written in R - if there is an example, then the data and all analyses are in there)
+  
+* I will ask questions
+* hopefully, you will too
+
+
+## What this course is not?
+
+* an R course (but I can recommend [R for Data Science](https://r4ds.had.co.nz/) by H. Wickham)
+* a "how-to" - all code is there, but you don't need to memorize it
+* a coverage of all "advanced" statistical methods
+
+
+## Grades
+
+* there will be a test at the end of the semester
+
+
+## Resources
+
+* all my materials for this course can be found at the git hub repo [bpiskernik/2022_SA_advanced_statistical_methods](https://github.com/bpiskernik/2022_SA_advanced_statistical_methods) 
+* the slides will be in moodle
+* the slides contain links to additional material (for those who are interested)
