@@ -1,4 +1,0 @@
-"0","out <- tibble(data=c(rnorm(980), rnorm(20, 50, 5)))"
-"0","ggplot(out, aes(data)) +"
-"0","  geom_histogram(bins = 100) +"
-"0","  geom_vline(aes(xintercept = mean(out$data)),col='red',size=2)"

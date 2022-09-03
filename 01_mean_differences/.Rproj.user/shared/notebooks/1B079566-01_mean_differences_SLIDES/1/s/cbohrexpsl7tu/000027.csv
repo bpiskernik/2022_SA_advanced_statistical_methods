@@ -1,5 +1,0 @@
-"0","gamma <- tibble(data=rgamma(1000, 2, 1))"
-"0","ggplot(gamma, aes(data)) +"
-"0","  geom_histogram(bins = 40) +"
-"0","  geom_vline(aes(xintercept = mean(gamma$data)),col='red',size=2)"
-"0",""

@@ -1,5 +1,0 @@
-"0","do.call(pwr::pwr.t.test, c(type='two.sample', params)) %>% .$n"
-"1","[1]"
-"1"," 252.1275"
-"1","
-"

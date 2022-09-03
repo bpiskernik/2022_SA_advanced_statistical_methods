@@ -1,4 +1,0 @@
-"0","bimodal <- tibble(data=FamilyRank::rbinorm(1000, -1, 1, .4, .4, .5))"
-"0","ggplot(bimodal, aes(data)) +"
-"0","  geom_histogram(bins = 40) +"
-"0","  geom_vline(aes(xintercept = mean(bimodal$data)),col='red',size=2)"
