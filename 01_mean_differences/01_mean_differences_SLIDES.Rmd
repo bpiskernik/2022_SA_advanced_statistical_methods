@@ -146,11 +146,13 @@ Steps:
 
 1. value of interest (e.g., difference of mean between groups) is measured in sample.
 2. all data is pooled
-3. all permutations, that result in the original group sizes are drawn
+3. all permutations, that result in the original group sizes are drawn (then it is exact, often just a sample is used)
 4. value of interest is calculated in each permutation
 5. the original value is compared to all others
 6. if it is bigger than 95%, then the H0 is rejected (α=.05, one-sided)
 7. for a two-sided test the absolute value is compared with all absolute values
+
+For a nice visual explanation see [here](https://www.jwilber.me/permutationtest/).
 
 
 ## Digression: Resampling Methods | Bootstrapping {.build .smaller}
