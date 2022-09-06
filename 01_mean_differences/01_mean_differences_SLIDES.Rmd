@@ -109,8 +109,8 @@ ggplot(out, aes(data)) +
   
 ## The issue of testing the conditions
 
-* pre-test are statistical tests as well. They have their own Type I and Type II errors.
-* this causes a special form of a mutliple testing scenario
+* pre-test are statistical tests as well. They have their own Type I and Type II errors and are dependent on *n*.
+* this causes a special form of a multiple testing scenario
 * sequential: typical corrections like Bonferroni or [Benjamini-Hochberg](https://www.jstor.org/stable/2346101) for parallel testing don't apply
 * consequence: unknown final type-I- and type-II-risks (see, e.g., [Rasch et al., 2011](https://link.springer.com/article/10.1007/s00362-009-0224-x))
 * Recommendation: **if there is a good, robust alternative, then use it right from the start**
@@ -119,9 +119,10 @@ ggplot(out, aes(data)) +
 
 ## Robust Alternatives {.smaller}
 
-* parametric: e.g., [Welch's ANOVA](https://doi.org/10.2307/2332579)
-  - work well
-  - not available for many designs
+* parametric corrections: 
+  - between: [Welch's ANOVA](https://doi.org/10.2307/2332579)
+  - within: [Greenhouse-Geisser](https://doi.org/10.1007/BF02289823)
+  
   
 * non-parametric:
   - distributional tests (e.g. [Kruskal-Wallis Test](https://doi.org/10.2307/2280779))
