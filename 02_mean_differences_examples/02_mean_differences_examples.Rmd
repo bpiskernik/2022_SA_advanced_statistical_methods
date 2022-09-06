@@ -1,0 +1,218 @@
+---
+title: "Mean differences - Practical examples"
+author: "Bernhard Piskernik"
+date: "2022/09/29"
+output: 
+  ioslides_presentation:
+        css: ../style.css
+        incremental: true
+---
+
+
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(plotly)
+library(kableExtra)
+library(sf)
+options(warn=-1)
+options("kableExtra.html.bsTable" = T)
+theme_set(theme_minimal())
+```
+
+
+```{r helper, include=FALSE}
+toTable <- function(df){
+  df %>% kable() %>% kable_styling()
+  }
+```
+
+
+```{r data_load, include=FALSE}
+# retrieved shape files from https://www.bfs.admin.ch/asset/en/22484210
+regions <- st_read('../data/ag-b-00.03-875-gg22/ggg_2022_LV95/shp/g1r22.shp', quiet=TRUE)
+
+# retrieve MOSAiCH data from https://doi.org/10.48573/t659-e039
+mosaich <- haven::read_sav('../data/MOSAiCH_2021/swissubase_2033_1_0/2033_MOSAiCH2021_Data_E_v1.0.0.sav') %>%
+  # use labels instead of values for Nuts2
+  mutate(Nuts2 = haven::as_factor(Nuts2))
+
+df_1f <- mosaich %>%
+  # reduce to needed variables
+  select(Nuts2, H1) %>%
+  # remove missings
+  drop_na() %>%
+  # remove missing factor levels
+  mutate(Nuts2 = forcats::fct_drop(Nuts2))
+```
+
+
+
+## One factoral design {.build}
+
+Research question: *Does happiness differ between the Swiss regions?*
+
+
+
+
+```{r,  echo=FALSE, message=FALSE, fig.height=4}
+p <- ggplot()+
+  geom_sf(data = regions, aes(fill = GRNAME)) +
+  annotate(
+    geom = 'text',
+    label = as.character(expression(paste("\U1F603", "?"))),
+    parse = TRUE, 
+    size = 25,
+    x = 2670000,
+    y = 1200000
+  )
+
+p
+```
+
+
+## Data {.build}
+
+Source: [MOSAiCH 2021. Measurement and Observation of Social Attitudes in Switzerland. Study on Health and Health Care and related topics](https://doi.org/10.48573/t659-e039)
+
+Variables:
+
+* `Nuts2`: _Large Regions_ 
+* `H1` (variable name not a hypothesis): _Q1 How happy or unhappy_ [1 Completely happy - 7 Completely unhappy]
+
+`H1` is obviously ordinal - can mean even be appropriate?
+
+## Hypotheses {.build .flexbox .vcenter}
+
+Hypothesis 1: The respondents from the 7 regions reported different mean happiness levels.
+
+
+Hypothesis 2: Respondents from _Espace Mittelland_ reported higher mean happiness levels than _Zentralschweiz_.
+
+
+## Look at the data - numerical 
+
+\renewcommand{\arraystretch}{2}
+```{r,  echo=FALSE, message=FALSE}
+df_1f %>%
+  group_by(Nuts2) %>%
+  summarise(
+    n = n(),
+    mean = mean(H1) %>% round(2),
+    trimmed10 = mean(H1, trim=.10) %>% round(2),
+    median = median(H1) %>% round(2),
+    sd = sd(H1) %>% round(2),
+    var = var(H1) %>% round(2),
+    skew = moments::skewness(H1) %>% round(2),
+    kurt = moments::kurtosis(H1) %>% round(2)
+  ) %>%
+  kable(booktabs = TRUE, linesep = "\\addlinespace") %>%
+  kable_styling(font_size = 22, latex_options = "striped")
+```
+
+## Look at the data - graphical {.build}
+
+```{r,  echo=FALSE, message=FALSE, fig.height=4}
+p <- df_1f %>%
+  ggplot(aes(x=Nuts2, y=H1, fill=Nuts2)) +
+    geom_boxplot() +
+    theme(legend.position = "none")  +
+    scale_x_discrete(guide = guide_axis(angle=30)) 
+
+ggplotly(p) %>%
+  config(displayModeBar = FALSE)
+    
+```
+
+**Box plots** are excellent to display distributions.<br>Why are they not a good choice in case?
+
+## Look at the data - graphical {.build}
+
+```{r,  echo=FALSE, message=FALSE, fig.height=4}
+p <- df_1f %>%
+  ggplot(aes(x=H1, y = ..density.., fill=Nuts2)) +
+    geom_histogram() +
+    facet_wrap(~Nuts2, nrow=2) +
+    theme(legend.position = "none")  
+
+ggplotly(p) %>%
+  config(displayModeBar = FALSE)
+    
+```
+
+**WARNING**: depending on the bin size **histograms** can be misleading. 
+
+## Look at the data - graphical {.build}
+
+```{r,  echo=FALSE, message=FALSE, fig.height=4}
+p <- df_1f %>%
+  ggplot(aes(sample=H1, color=Nuts2)) +
+    stat_qq(distribution=qnorm) + 
+    stat_qq_line(distribution=qnorm) +
+    facet_wrap(~Nuts2, nrow=2) +
+    theme(legend.position = "none")  
+
+
+ggplotly(p) %>%
+  config(displayModeBar = FALSE)
+    
+```
+
+
+Quantile-Quantile-plots are a great way to compare the sample distribution to a theoretical distribution. Ideally, the points would match the line.
+
+Why do we see a stair pattern?
+
+## Look at the data - graphical | add some random noise (normal [0, 0.5]) {.build .smaller}
+
+```{r,  echo=FALSE, message=FALSE, fig.height=4}
+p <- df_1f %>%
+  mutate(H1 = H1 + rnorm(length(H1),0,0.5)) %>%
+  ggplot(aes(sample=H1, color=Nuts2)) +
+    stat_qq(distribution=qnorm) + 
+    stat_qq_line(distribution=qnorm) +
+    facet_wrap(~Nuts2, nrow=2) +
+    theme(legend.position = "none")  
+
+
+ggplotly(p) %>%
+  config(displayModeBar = FALSE)
+    
+```
+
+## Analysis - parametric | Omnibus {.smaller .build  #reduceTopMarginCode}
+
+
+```{r, strip.white = TRUE}
+oneway.test(H1~Nuts2,var.equal=FALSE, data=df_1f)
+```
+
+
+[Levine and Hullett (2002)](https://doi.org/10.1111/j.1468-2958.2002.tb00828.x) recommend Ω² or η² as **effect size** for ANOVAs.
+
+* partial η² (used by SPSS) strongly depends on the variability of the residuals
+* η² biased e.g. when _n_ is small or there are many levels
+
+```{r}
+aov(H1~Nuts2, data=df_1f) %>% effectsize::omega_squared(verbose=F) %>% toTable()
+```
+
+
+Hypothesis 1: The respondents from the 7 regions reported different mean happiness levels. --> Null-Hypothesis can be rejected, but the effect is minimal
+
+## Analysis - parametric | Contrasts {.smaller .build}
+
+```{r}
+f1_lm <- lm(H1~Nuts2, data=df_1f)
+f1_emm <- emmeans::emmeans(f1_lm, 'Nuts2', data=df_1f)
+emmeans::test(
+  emmeans::contrast(
+    f1_emm, 
+    list(ac1=c(0, 1, 0, 0, 0, -1, 0)) # this list can contain multiple contrasts
+    ),
+  adjust='none'
+  )
+```
+
+
+

@@ -75,5 +75,7 @@ div.good pre.r { background-color: #81C784; }
 div.bad pre { background-color: #FFCDD2; }
 div.bad pre.r { background-color: #E57373; }
 
-
+#reduceTopMarginCode pre:first-of-type {
+  margin-top: -50px
+}
 
