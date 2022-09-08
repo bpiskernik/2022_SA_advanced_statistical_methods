@@ -75,7 +75,27 @@ div.good pre.r { background-color: #81C784; }
 div.bad pre { background-color: #FFCDD2; }
 div.bad pre.r { background-color: #E57373; }
 
-#reduceTopMarginCode pre:first-of-type {
+.reduceTopMarginCode pre:first-of-type {
   margin-top: -50px
 }
+
+.reduceTopMarginText p:first-of-type {
+  margin-top: -50px
+}
+
+.bottomMargin-10 {
+  margin-bottom: -10px
+}
+
+.bottomMargin-5 {
+  margin-bottom: -5px
+}
+
+
+.tableHeaderGrey > table.rmdtable th {
+  color: black;
+  font-size: 18px;
+  background: #E6E6E6;
+}
+
 

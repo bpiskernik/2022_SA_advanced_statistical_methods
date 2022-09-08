@@ -42,8 +42,11 @@ df_1f <- mosaich %>%
   select(Nuts2, H1) %>%
   # remove missings
   drop_na() %>%
-  # remove missing factor levels
-  mutate(Nuts2 = forcats::fct_drop(Nuts2))
+  mutate(
+    # remove missing factor levels
+    Nuts2 = forcats::fct_drop(Nuts2),
+    H1 = unclass(H1)
+    )
 ```
 
 
@@ -100,7 +103,7 @@ df_1f %>%
     n = n(),
     mean = mean(H1) %>% round(2),
     trimmed10 = mean(H1, trim=.10) %>% round(2),
-    median = median(H1) %>% round(2),
+    median = median(H1) %>% unclass(),
     sd = sd(H1) %>% round(2),
     var = var(H1) %>% round(2),
     skew = moments::skewness(H1) %>% round(2),
@@ -116,8 +119,10 @@ df_1f %>%
 p <- df_1f %>%
   ggplot(aes(x=Nuts2, y=H1, fill=Nuts2)) +
     geom_boxplot() +
-    theme(legend.position = "none")  +
-    scale_x_discrete(guide = guide_axis(angle=30)) 
+    theme(
+      legend.position = "none",
+      text = element_text(size=10)
+      ) 
 
 ggplotly(p) %>%
   config(displayModeBar = FALSE)
@@ -180,39 +185,123 @@ ggplotly(p) %>%
     
 ```
 
-## Analysis - parametric | Omnibus {.smaller .build  #reduceTopMarginCode}
+## Analysis - parametric | Omnibus {.smaller .build  .reduceTopMarginCode}
 
 
-```{r, strip.white = TRUE}
+```{r, class.source='bottomMargin-10'}
 oneway.test(H1~Nuts2,var.equal=FALSE, data=df_1f)
 ```
 
 
-[Levine and Hullett (2002)](https://doi.org/10.1111/j.1468-2958.2002.tb00828.x) recommend Ω² or η² as **effect size** for ANOVAs.
+[Levine and Hullett (2002)](https://doi.org/10.1111/j.1468-2958.2002.tb00828.x) recommend ω² or η² as **effect size** for ANOVAs.
 
 * partial η² (used by SPSS) strongly depends on the variability of the residuals
 * η² biased e.g. when _n_ is small or there are many levels
 
-```{r}
+```{r, class.source='bottomMargin-5'}
 aov(H1~Nuts2, data=df_1f) %>% effectsize::omega_squared(verbose=F) %>% toTable()
 ```
 
 
-Hypothesis 1: The respondents from the 7 regions reported different mean happiness levels. --> Null-Hypothesis can be rejected, but the effect is minimal
+Hypothesis 1: The respondents from the 7 regions reported different mean happiness levels. --> Null-Hypothesis can be rejected, but the effect is negligible
+
+## Digression: Effect size {.smaller .build .tableHeaderGrey .reduceTopMarginText}
+
+<br>
+The binning of effect sizes are just _rules of thumb_  and somewhat arbitrary.
+
+|            | [Cohen (1992)](https://doi.org/10.1037/0033-2909.112.1.155) | [Field (2013)](https://www.discoveringstatistics.com/books/dsus/) |
+|------------|--------------|--------------|
+| very small | < 0.02       | < 0.01       |
+| small      | < 0.13       | < 0.06       |
+| medium     | < 0.26       | < 0.14       |
+| large      | >= 0.26      | >= 0.14      |
+
+<br>
+When rating the effect size, consider the customs of  your (sub-)domain and, more importantly, the size of other known effects on your dependent variable.
+
+The R package [effectsize](https://cran.r-project.org/web/packages/effectsize/) includes [various rules](https://cran.r-project.org/web/packages/effectsize/vignettes/interpret.html) to help with the interpretation.
+
+```{r}
+effectsize::interpret_omega_squared(0.008, rules = "cohen1992")
+```
+
 
 ## Analysis - parametric | Contrasts {.smaller .build}
 
-```{r}
-f1_lm <- lm(H1~Nuts2, data=df_1f)
-f1_emm <- emmeans::emmeans(f1_lm, 'Nuts2', data=df_1f)
+The typical way of testing Hypothesis 2 ( _Espace Mittelland_ happier than _Zentralschweiz_) is with a linear contrast (but this is NOT the recommended way).
+
+```{r, class.source='bottomMargin-5'}
+f1_emm <- lm(H1~Nuts2, data=df_1f) %>% emmeans::emmeans('Nuts2', data=df_1f)
 emmeans::test(
-  emmeans::contrast(
-    f1_emm, 
-    list(ac1=c(0, 1, 0, 0, 0, -1, 0)) # this list can contain multiple contrasts
-    ),
-  adjust='none'
-  )
+  emmeans::contrast(f1_emm, list(ac1=c(0, 1, 0, 0, 0, -1, 0))),
+  adjust='none')
 ```
 
+_Note 1_: This analytic contrast tests a distinct hypothesis; hence no _p_-adjustment is needed. Comparisons without specific hypotheses (e.g., orthogonal contrasts) would need an adjustment of the significance level (e.g., [False Discovery Rate](https://www.jstor.org/stable/2346101))
+
+_Note 2_: This analytic contrast is 2-sided, but H2 is 1-sided -> _p_ needs to be halved
+
+**BUT**: Linear contrasts are very sensitive to variance heterogeneity. [Jan & Shieh (2019)](10.1371/journal.pone.0214391) recommend Welch's _t_-test instead.
+
+## Analysis - parametric | Contrasts {.smaller .build }
+
+Perform Welch's _t_-test
+
+```{r,  class.source='bottomMargin-10'}
+df_1f %>%
+  filter(Nuts2 %in% c('Espace Mittelland', 'Zentralschweiz')) %>%
+  t.test(H1~Nuts2, data=., alternative='greater')
+```
+
+## Analysis - parametric | Contrasts {.smaller .build }
+
+Get effect size
+
+```{r, class.source='bottomMargin-10'}
+df_1f %>%
+  filter(Nuts2 %in% c('Espace Mittelland', 'Zentralschweiz')) %>%
+  mutate(Nuts2 = forcats::fct_drop(Nuts2)) %>%
+  effsize::cohen.d(H1~Nuts2, data=.)
+```
+
+
+Hypothesis 2: Respondents from _Espace Mittelland_ reported higher mean happiness levels than _Zentralschweiz_.
+
+--> the Null-Hypothesis can be rejected, but the effect is negligible
+
+
+## Analysis - parametric | Post-Hoc Analysis {.smaller .build }
+
+**Games-Howell Modification of the Tukey Test**
+
+Works with unequal samples sizes and heterogeneity of variance.
+
+```{r, class.source='bottomMargin-10'}
+rstatix::games_howell_test(df_1f, H1~Nuts2, conf.level = 0.95, detailed = FALSE)
+```
+
+
+
+## Analysis - parametric | Post-Hoc Analysis {.smaller .build .reduceTopMarginText}
+
+<br>
+**Pairwise Welch _t_-tests with alpha adjustment**
+
+```{r, class.source='bottomMargin-10'}
+pairwise.t.test(df_1f$H1, df_1f$Nuts2, data=df_1f, pool.sd=TRUE, p.adj="fdr")
+```
+
+## 
+
+```{r}
+ggstatsplot::ggbetweenstats(
+  data = df_1f,
+  x = H1,
+  y = Nuts2,
+  var.equal=F,
+  p.adjust.method="fdr"
+)
+```
 
 
