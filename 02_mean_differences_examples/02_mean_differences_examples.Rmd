@@ -6,18 +6,23 @@ output:
   ioslides_presentation:
         css: ../style.css
         incremental: true
+        self_contained: true
 ---
 
 
 
 ```{r setup, include=FALSE}
 library(tidyverse)
+library(magrittr)
 library(plotly)
 library(kableExtra)
 library(sf)
 options(warn=-1)
 options("kableExtra.html.bsTable" = T)
 theme_set(theme_minimal())
+
+# for parallel processing
+library(doMC);options(cores=4);registerDoMC()
 ```
 
 
@@ -39,10 +44,11 @@ mosaich <- haven::read_sav('../data/MOSAiCH_2021/swissubase_2033_1_0/2033_MOSAiC
 
 df_1f <- mosaich %>%
   # reduce to needed variables
-  select(Nuts2, H1) %>%
+  select(IDNO, Nuts2, H1) %>%
   # remove missings
   drop_na() %>%
   mutate(
+    IDNO = as_factor(IDNO),
     # remove missing factor levels
     Nuts2 = forcats::fct_drop(Nuts2),
     H1 = unclass(H1)
@@ -93,7 +99,7 @@ Hypothesis 1: The respondents from the 7 regions reported different mean happine
 Hypothesis 2: Respondents from _Espace Mittelland_ reported higher mean happiness levels than _Zentralschweiz_.
 
 
-## Look at the data - numerical 
+## Look at the data - numerical {.build}
 
 \renewcommand{\arraystretch}{2}
 ```{r,  echo=FALSE, message=FALSE}
@@ -113,12 +119,15 @@ df_1f %>%
   kable_styling(font_size = 22, latex_options = "striped")
 ```
 
+[Curran, et al. (1996)](https://doi.org/10.1037/1082-989X.1.1.16) suggest that |skew| < 2 an |kurtosis| < 7 should be considered normal.
+
 ## Look at the data - graphical {.build}
 
 ```{r,  echo=FALSE, message=FALSE, fig.height=4}
 p <- df_1f %>%
   ggplot(aes(x=Nuts2, y=H1, fill=Nuts2)) +
-    geom_boxplot() +
+    geom_boxplot()+
+    stat_summary(fun = mean, geom = "point", shape = 18, size = 3.5, color = "black") +
     theme(
       legend.position = "none",
       text = element_text(size=10)
@@ -185,7 +194,24 @@ ggplotly(p) %>%
     
 ```
 
-## Analysis - parametric | Omnibus {.smaller .build  .reduceTopMarginCode}
+## Look at the data - graphical
+
+```{r,  echo=FALSE, message=FALSE}
+p <- Rmisc::summarySE(df_1f, measurevar="H1", groupvars="Nuts2",conf.interval=.95) %>%
+  ggplot(aes(x=Nuts2, y=H1, color=Nuts2)) +
+  geom_bar(position=position_dodge(), stat="identity", fill='white') + 
+  geom_errorbar(aes(ymin=H1-ci, ymax=H1+ci),width=.2, position=position_dodge(.9))  +
+  theme(legend.position = "none") +
+  ggtitle('Barplots of mean with 95% CI')
+
+ggplotly(p) %>%
+  config(displayModeBar = FALSE)
+```
+
+**Warning**: if there are more than 2 groups, then non-overlapping CIs don't necessarily imply a significant difference.
+
+
+## Analysis - parametric | Omnibus {.smaller .build  .smallcode .reduceTopMarginCode}
 
 
 ```{r, class.source='bottomMargin-10'}
@@ -193,10 +219,11 @@ oneway.test(H1~Nuts2,var.equal=FALSE, data=df_1f)
 ```
 
 
-[Levine and Hullett (2002)](https://doi.org/10.1111/j.1468-2958.2002.tb00828.x) recommend ω² or η² as **effect size** for ANOVAs.
+[Levine and Hullett (2002)](https://doi.org/10.1111/j.1468-2958.2002.tb00828.x) recommend ω² or η² as **effect size** (estimators of explained variance by factor) for ANOVAs.
 
 * partial η² (used by SPSS) strongly depends on the variability of the residuals
 * η² biased e.g. when _n_ is small or there are many levels
+* in case of multiple factors [Keppel (1991)](https://psycnet.apa.org/record/1991-98751-000) recommends _partial_ ω²
 
 ```{r, class.source='bottomMargin-5'}
 aov(H1~Nuts2, data=df_1f) %>% effectsize::omega_squared(verbose=F) %>% toTable()
@@ -210,7 +237,7 @@ Hypothesis 1: The respondents from the 7 regions reported different mean happine
 <br>
 The binning of effect sizes are just _rules of thumb_  and somewhat arbitrary.
 
-|            | [Cohen (1992)](https://doi.org/10.1037/0033-2909.112.1.155) | [Field (2013)](https://www.discoveringstatistics.com/books/dsus/) |
+| ω²         | [Cohen (1992)](https://doi.org/10.1037/0033-2909.112.1.155) | [Field (2013)](https://www.discoveringstatistics.com/books/dsus/) |
 |------------|--------------|--------------|
 | very small | < 0.02       | < 0.01       |
 | small      | < 0.13       | < 0.06       |
@@ -265,10 +292,26 @@ df_1f %>%
   effsize::cohen.d(H1~Nuts2, data=.)
 ```
 
-
 Hypothesis 2: Respondents from _Espace Mittelland_ reported higher mean happiness levels than _Zentralschweiz_.
 
 --> the Null-Hypothesis can be rejected, but the effect is negligible
+
+
+## Degression: Effect size  {.smaller .build .tableHeaderGrey}
+
+Cohen's d = Mean distance relative to the pooled variance
+
+|            | [Cohen (1988)](https://www.scirp.org/(S(lz5mqp453edsnp55rrgjct55))/reference/ReferencesPapers.aspx?ReferenceID=2041144) | [Sawilowsky (2009)](https://digitalcommons.wayne.edu/coe_tbf/4/) | [Gignac & Szodorai (2016)](https://doi.org/10.1016/j.paid.2016.06.069) | [Lovakov & Agadullina (2021)](https://doi.org/10.1002/ejsp.2752) |
+|------------|---------------|-------------------|--------------------------|-----------------------------|
+| tiny       |               | < 0.1             |                          |                             |
+| very small | < 0.2         | < 0.2             | < 0.2                    | < 0.15                      |
+| small      | < 0.5         | < 0.5             | < 0.41                   | < 0.36                      |
+| medium     | < 0.8         | < 0.8             | < 0.63                   | < 0.65                      |
+| large      | >= 0.8        | < 1.2             | >= 0.63                  | >= 0.65                     |
+| very large |               | < 2               |                          |                             |
+| huge       |               | >= 2              |                          |                             |
+
+
 
 
 ## Analysis - parametric | Post-Hoc Analysis {.smaller .build }
@@ -292,16 +335,180 @@ rstatix::games_howell_test(df_1f, H1~Nuts2, conf.level = 0.95, detailed = FALSE)
 pairwise.t.test(df_1f$H1, df_1f$Nuts2, data=df_1f, pool.sd=TRUE, p.adj="fdr")
 ```
 
-## 
+## Analysis - Permutation test {.smaller .build .reduceTopMarginText}
+
+Hypothesis 1
+
+```{r ezPerm, cache=TRUE, message=FALSE, class.source='bottomMargin-5'}
+df_1f %>% ez::ezPerm(
+  dv = H1,
+  wid = IDNO,
+  between = Nuts2,
+  perms = 20, # THIS SHOULD BE 1000 AT LEAST
+  parallel=TRUE
+) 
+```
+
+Hypothesis 2
+
+```{r exactRankTests, cache=TRUE, class.source='bottomMargin-5'}
+df_1f %>%
+  filter(Nuts2 %in% c('Espace Mittelland', 'Zentralschweiz')) %>%
+  exactRankTests::perm.test(H1~Nuts2, data=., alternative='greater', exact=TRUE)
+```
+
+## Analysis - Robust | bootstrap & trimmed means {.smaller .build  .reduceTopMarginText}
+
+<br>
+For detailed information on robust hypothesis testing see [Wilcox (2013)](https://www.sciencedirect.com/book/9780123869838/introduction-to-robust-estimation-and-hypothesis-testing).
+
+Hypothesis 1
+
+```{r, class.source='bottomMargin-10'}
+WRS2::t1waybt(
+  H1 ~ Nuts2, 
+  data = df_1f, 
+  tr = 0.2, # trimmed to middle 80%
+  nboot = 1000 # 10000 would be better
+  ) 
+```
+
+The effect size ξ was proposed by [Wilcox & Tian (2011)](https://doi.org/10.1080/02664763.2010.498507) and is heteroscedastic generalization of Cohen's _d_.
+
+## Analysis - Robust | Hypothesis 2 {.smaller .build .reduceTopMarginText}
+
+<br>
+[Yuen (1974)](https://doi.org/10.2307/2334299) proposed a test statistic for a two-sample trimmed mean test which allows for the presence of unequal variances. Without trimming this is Welch's _t_-test.
+
+```{r, class.source='bottomMargin-5'}
+df_1f %>%
+  filter(Nuts2 %in% c('Espace Mittelland', 'Zentralschweiz')) %>%
+  mutate(Nuts2 = forcats::fct_drop(Nuts2)) %>%
+  WRS2::yuenbt(H1~Nuts2, data=., tr = 0.2, nboot = 1000, side = TRUE)
+```
+[Algina, Keselman, and Penfield (2005)](https://doi.org/10.1037/1082-989x.10.3.317) propose a robust version of Cohen’s _d_.
+
+```{r, echo=FALSE, message=FALSE, class.source='bottomMargin-5'}
+df_1f %>%
+  filter(Nuts2 %in% c('Espace Mittelland', 'Zentralschweiz')) %>%
+  mutate(Nuts2 = forcats::fct_drop(Nuts2)) %>%
+  WRS2::akp.effect(H1~Nuts2, data=.)
+```
+
+
+
+## Analysis - Robust | bootstrap & trimmed means {.smaller .build .reduceTopMarginText}
+
+Post-Hoc
+
+```{r, include=FALSE}
+adjust_p <- function(mcp1){
+    mcp1$comp %>%
+      as_tibble() %>%
+      rename(r1 = Group, r2 = V2) %>%
+      mutate_at(vars(starts_with('r')), function(x) {mcp1$fnames[x]}) %>%
+      arrange(`p-value`) %>%
+      mutate(
+        p_adj = p.adjust(`p-value`, method='fdr')
+      )
+}
+```
+
+
+```{r, class.source='bottomMargin-5'}
+res <- WRS2::mcppb20(
+  H1 ~ Nuts2, 
+  data = df_1f,
+  nboot = 1000, # 10000 would be better
+  )
+adjust_p(res) # custom function to add FDR adjusted p
+```
+
+
+## Condition testing (if you insist) {.smaller .build .reduceTopMarginText}
+
+Step 1: perform analysis & save residuals
 
 ```{r}
-ggstatsplot::ggbetweenstats(
-  data = df_1f,
-  x = H1,
-  y = Nuts2,
-  var.equal=F,
-  p.adjust.method="fdr"
-)
+df_1f %<>% mutate(res = lm(H1 ~ Nuts2, data = .)$residuals)
 ```
+
+Step 2: test normality with [Lilliefors Test](https://doi.org/10.1080/01621459.1967.10482916) ([Anderson-Darling](https://doi.org/10.1214/aoms/1177729437) cannot deal with ties)
+
+```{r, class.source='bottomMargin-10'}
+nortest::lillie.test(df_1f$res)
+```
+
+Step 3: test variance homogeneity with [Brown-Forsythe](https://doi.org/10.2307/2285659) (Levene is sensitive to normality)
+
+```{r, class.source='bottomMargin-10'}
+lawstat::levene.test(df_1f$res, df_1f$Nuts2, location='median')
+```
+
+
+## Digression: sum of squares types | Type I {.build}
+
+**Type I Sums of Squares** is sequential 
+
+1. assign a maximum of variation to first variable
+2. in the remaining variation, assign the maximum of variation to next variable
+3. repeat 2 for all remaining variables
+4. in the remaining variation, assign the maximum of variation to first interaction effect
+5. in the remaining variation, assign the maximum of variation to next interaction effect
+6. repeat 5 for all remaining interaction effects
+7. and assign the rest to the Residual Sums of Squares
+
+Use _Type I_ if you have theoretical considerations to inflate the importance of one of your variables
+
+
+## Digression: sum of squares types | Type II & III {.build}
+
+**Type II Sums of Squares** doesn't "see" interactions
+
+* sequence doesn't matter
+* the variation assigned to each independent variable is accounting for all other independent variables
+* there is no interaction effect effect (if this is true, then it is more powerful than _Type III_)
+
+**Type III Sums of Squares** aka partial sums of squares 
+
+* like II, but with interaction effects
+
+Except for true experiments, Type III is preferable because testing for an interaction effect is yet another condition we would need to test first.
+
+## 2-Factor ANOVA
+
+* there is no Welch version or something similar :'(
+* especially problematic if factor combinations lead to varying cell counts
+* [Xu et al. (2013)](https://doi.org/10.1016/j.jmva.2012.10.008) proposed a parametric bootstrap to deal with unequal variances. [included in [twowaytests](https://cran.r-project.org/web/packages/twowaytests/index.html)]
+* the previously used `ezPerm()` in [ez](https://cran.r-project.org/web/packages/ez/) can execute the permutation test with multiple factors (slow, just main effects)
+* the previously used [WRS2](https://link.springer.com/article/10.3758/s13428-019-01246-w) package provides bootstrapping and trimmed means (my favorite in this list)
+* if the robust method cannot deal with _covariates_, then regress (maybe robust) the DV on them, save the residuals and use the residuals instead of the DV in the analysis
+
+
+## repeated measures ANOVA (within)
+
+* creating Bar plots to provide "inference by eye" is tricky - should show all pairwise mean differences, instead of group means, with error bars (see [Franz & Loftus (2012)](https://link.springer.com/article/10.3758/s13423-012-0230-1))
+* if you want to use the traditional parametric approach, but don't test for variance homogeneity (if you do, it would be the [Mauchly's sphericity test](https://www.jstor.org/stable/2235878)), then use the [Greenhouse–Geisser](https://link.springer.com/article/10.1007/BF02289823) or the [Huynh–Feldt](https://doi.org/10.3102/10769986001001069) correction.
+* the previously used `ezPerm()` in [ez](https://cran.r-project.org/web/packages/ez/) can execute the permutation test with within factors (slow, just main effects)
+* the previously used [WRS2](https://link.springer.com/article/10.3758/s13428-019-01246-w) package provides bootstrapping and trimmed means (my favorite in this list)
+
+## mixed ANOVA
+
+* the previously used [WRS2](https://link.springer.com/article/10.3758/s13428-019-01246-w) package provides bootstrapping and trimmed means for one between and one within factor
+* `ezBoot()` in [ez](https://cran.r-project.org/web/packages/ez/) can execute bootstrapping (no trimming) for an arbitrary number of between and within factors
+* the previously used `ezPerm()` in [ez](https://cran.r-project.org/web/packages/ez/) can execute the permutation test with mixed designs (slow, just main effects)
+
+
+## Try it yourself (at home)
+
+* 2-factors: 
+  - Is there any Swiss region, where women/men are especially happy?
+  - use the variables `H1` (happy/unhappy), `Nuts2` (region) and `Demo1` (gender) from the [MOSAiCH](https://doi.org/10.48573/t659-e039) data set
+  
+* mixed:
+  - Can you reproduce the result regarding _psychological distress_ in [Prudenzi, et al. (2022)](https://doi.org/10.1371/journal.pone.0266357)? 
+  - The data is available [here](https://doi.org/10.17605/OSF.IO/ZNCWA).
+  - Would the result change with a robust approach?
+
 
 
