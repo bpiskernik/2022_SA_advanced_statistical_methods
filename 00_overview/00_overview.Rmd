@@ -30,16 +30,9 @@ options(warn=-1)
 * don't expect me to be able to give a clear-cut answer (each time)
 
 
-## Topics
-
-* mean differences of groups
-* nested data
-* dimensionality reduction
-* finding groups in data
-
-
 ## Procedure
 
+* mostly online
 * I have prepared some slides
   - with information
   - with analyses
@@ -47,18 +40,43 @@ options(warn=-1)
   
 * I will ask questions
 * hopefully, you will too
+* there will be homework (partially graded)
 
 
 ## What this course is not?
 
 * an R course (but I can recommend [R for Data Science](https://r4ds.had.co.nz/) by H. Wickham)
-* a "how-to" - all code is there, but you don't need to memorize it
+* a coding course - all code is there, but you don't need to memorize it
 * a coverage of all "advanced" statistical methods
 
 
 ## Grades
 
-* there will be a test at the end of the semester
+* test at the end of the semester [80%]
+* graded homework [20%]
+
+
+## Timetable | attention: not each week
+
+* 22.09. start
+* 06.10. mean differences of groups I
+* 13.10. mean differences of groups II (**NOT** online)
+* 03.11. multiple regression
+* 17.11. nested data
+* 01.12. _your pick I_
+* 15.12. _your pick II_
+* 22.12. optional: bring your (methodical) problem
+
+## Your picks | voting in Moodle until 13.10.
+
+* missing data
+* generalized linear model
+* ordinal data in regressions
+* nested data (a deeper dive)
+* finding groups in data
+* dimensionality reduction
+* path models
+* write me until tomorrow for the addition of further options
 
 
 ## Resources
@@ -66,3 +84,11 @@ options(warn=-1)
 * all my materials for this course can be found at the git hub repo [bpiskernik/2022_SA_advanced_statistical_methods](https://github.com/bpiskernik/2022_SA_advanced_statistical_methods) 
 * the slides will be in moodle
 * the slides contain links to additional material (for those who are interested)
+
+
+## Homework | **NOT** graded
+
+* install R
+* install RStudio
+* install [Tidyverse](https://www.tidyverse.org/) in RStudio
+* skip through [R for Data Science](https://r4ds.had.co.nz/)

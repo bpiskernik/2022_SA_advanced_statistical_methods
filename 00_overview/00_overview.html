@@ -3131,7 +3131,84 @@ slide:not(.current) .plotly.html-widget{
             
   </style>
 
-  <style type="text/css">.codefont pre {font-size: 20px;}.smallcode pre {font-size: 10px;margin-bottom: -6px;}blockquote{display:block;background: #fff;padding: 15px 20px 15px 45px;margin: 0 0 20px;position: relative;font-family: Georgia, serif;font-size: 20px;line-height: 1.2;color: #666;text-align: justify;border-left: 15px solid #c76c0c;border-right: 2px solid #c76c0c;-moz-box-shadow: 2px 2px 15px #ccc;-webkit-box-shadow: 2px 2px 15px #ccc;box-shadow: 2px 2px 15px #ccc;}blockquote::before{content: "\201C"; font-family: Georgia, serif;font-size: 60px;font-weight: bold;color: #999;position: absolute;left: 10px;top:5px;}blockquote::after{content: "";}blockquote a{text-decoration: none;background: #eee;cursor: pointer;padding: 0 3px;color: #c76c0c;}blockquote a:hover{color: #666;}blockquote em{font-style: italic;}div.good pre { background-color: #C8E6C9; }div.good pre.r { background-color: #81C784; }div.bad pre { background-color: #FFCDD2; }div.bad pre.r { background-color: #E57373; }</style>
+  <style type="text/css">.codefont pre {
+font-size: 20px;
+}
+.smallcode pre {
+font-size: 10px;
+margin-bottom: -6px;
+}
+blockquote{
+display:block;
+background: #fff;
+padding: 15px 20px 15px 45px;
+margin: 0 0 20px;
+position: relative;
+
+font-family: Georgia, serif;
+font-size: 20px;
+line-height: 1.2;
+color: #666;
+text-align: justify;
+
+border-left: 15px solid #c76c0c;
+border-right: 2px solid #c76c0c;
+
+-moz-box-shadow: 2px 2px 15px #ccc;
+-webkit-box-shadow: 2px 2px 15px #ccc;
+box-shadow: 2px 2px 15px #ccc;
+}
+blockquote::before{
+content: "\201C"; 
+
+font-family: Georgia, serif;
+font-size: 60px;
+font-weight: bold;
+color: #999;
+
+position: absolute;
+left: 10px;
+top:5px;
+}
+blockquote::after{
+
+content: "";
+}
+blockquote a{
+text-decoration: none;
+background: #eee;
+cursor: pointer;
+padding: 0 3px;
+color: #c76c0c;
+}
+blockquote a:hover{
+color: #666;
+}
+blockquote em{
+font-style: italic;
+}
+div.good pre { background-color: #C8E6C9; }
+div.good pre.r { background-color: #81C784; }
+div.bad pre { background-color: #FFCDD2; }
+div.bad pre.r { background-color: #E57373; }
+.reduceTopMarginCode pre:first-of-type {
+margin-top: -50px
+}
+.reduceTopMarginText p:first-of-type {
+margin-top: -50px
+}
+.bottomMargin-10 {
+margin-bottom: -10px
+}
+.bottomMargin-5 {
+margin-bottom: -5px
+}
+.tableHeaderGrey > table.rmdtable th {
+color: black;
+font-size: 18px;
+background: #E6E6E6;
+}
+</style>
 
 </head>
 
@@ -3166,18 +3243,10 @@ slide:not(.current) .plotly.html-widget{
 <li>don’t expect me to be able to give a clear-cut answer (each time)</li>
 </ul>
 
-</article></slide><slide class=""><hgroup><h2>Topics</h2></hgroup><article  id="topics">
-
-<ul class = 'build'>
-<li>mean differences of groups</li>
-<li>nested data</li>
-<li>dimensionality reduction</li>
-<li>finding groups in data</li>
-</ul>
-
 </article></slide><slide class=""><hgroup><h2>Procedure</h2></hgroup><article  id="procedure">
 
 <ul class = 'build'>
+<li>mostly online</li>
 <li>I have prepared some slides
 
 <ul class = 'build'>
@@ -3187,20 +3256,48 @@ slide:not(.current) .plotly.html-widget{
 </ul></li>
 <li>I will ask questions</li>
 <li>hopefully, you will too</li>
+<li>there will be homework (partially graded)</li>
 </ul>
 
 </article></slide><slide class=""><hgroup><h2>What this course is not?</h2></hgroup><article  id="what-this-course-is-not">
 
 <ul class = 'build'>
 <li>an R course (but I can recommend <a href='https://r4ds.had.co.nz/' title=''>R for Data Science</a> by H. Wickham)</li>
-<li>a &ldquo;how-to&rdquo; - all code is there, but you don’t need to memorize it</li>
+<li>a coding course - all code is there, but you don’t need to memorize it</li>
 <li>a coverage of all &ldquo;advanced&rdquo; statistical methods</li>
 </ul>
 
 </article></slide><slide class=""><hgroup><h2>Grades</h2></hgroup><article  id="grades">
 
 <ul class = 'build'>
-<li>there will be a test at the end of the semester</li>
+<li>test at the end of the semester [80%]</li>
+<li>graded homework [20%]</li>
+</ul>
+
+</article></slide><slide class=""><hgroup><h2>Timetable </h2><h3> attention: not each week</h3></hgroup><article  id="timetable-attention-not-each-week">
+
+<ul class = 'build'>
+<li>22.09. start</li>
+<li>06.10. mean differences of groups I</li>
+<li>13.10. mean differences of groups II (<strong>NOT</strong> online)</li>
+<li>03.11. multiple regression</li>
+<li>17.11. nested data</li>
+<li>01.12. <em>your pick I</em></li>
+<li>15.12. <em>your pick II</em></li>
+<li>22.12. optional: bring your (methodical) problem</li>
+</ul>
+
+</article></slide><slide class=""><hgroup><h2>Your picks </h2><h3> voting in Moodle until 13.10.</h3></hgroup><article  id="your-picks-voting-in-moodle-until-13.10.">
+
+<ul class = 'build'>
+<li>missing data</li>
+<li>generalized linear model</li>
+<li>ordinal data in regressions</li>
+<li>nested data (a deeper dive)</li>
+<li>finding groups in data</li>
+<li>dimensionality reduction</li>
+<li>path models</li>
+<li>write me until tomorrow for the addition of further options</li>
 </ul>
 
 </article></slide><slide class=""><hgroup><h2>Resources</h2></hgroup><article  id="resources">
@@ -3209,6 +3306,15 @@ slide:not(.current) .plotly.html-widget{
 <li>all my materials for this course can be found at the git hub repo <a href='https://github.com/bpiskernik/2022_SA_advanced_statistical_methods' title=''>bpiskernik/2022_SA_advanced_statistical_methods</a></li>
 <li>the slides will be in moodle</li>
 <li>the slides contain links to additional material (for those who are interested)</li>
+</ul>
+
+</article></slide><slide class=""><hgroup><h2>Homework </h2><h3> <strong>NOT</strong> graded</h3></hgroup><article  id="homework-not-graded">
+
+<ul class = 'build'>
+<li>install R</li>
+<li>install RStudio</li>
+<li>install <a href='https://www.tidyverse.org/' title=''>Tidyverse</a> in RStudio</li>
+<li>skip through <a href='https://r4ds.had.co.nz/' title=''>R for Data Science</a></li>
 </ul></article></slide>
 
 
