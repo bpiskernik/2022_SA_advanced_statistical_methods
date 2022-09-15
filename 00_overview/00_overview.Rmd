@@ -91,4 +91,5 @@ options(warn=-1)
 * install R
 * install RStudio
 * install [Tidyverse](https://www.tidyverse.org/) in RStudio
+* `git clone https://github.com/bpiskernik/2022_SA_advanced_statistical_methods.git`
 * skip through [R for Data Science](https://r4ds.had.co.nz/)
