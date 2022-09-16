@@ -1,7 +1,7 @@
 ---
 title: "Mean differences - Practical examples"
 author: "Bernhard Piskernik"
-date: "2022/09/29"
+date: "2022/10/13"
 output: 
   ioslides_presentation:
         css: ../style.css
@@ -446,35 +446,6 @@ lawstat::levene.test(df_1f$res, df_1f$Nuts2, location='median')
 ```
 
 
-## Digression: sum of squares types | Type I {.build}
-
-**Type I Sums of Squares** is sequential 
-
-1. assign a maximum of variation to first variable
-2. in the remaining variation, assign the maximum of variation to next variable
-3. repeat 2 for all remaining variables
-4. in the remaining variation, assign the maximum of variation to first interaction effect
-5. in the remaining variation, assign the maximum of variation to next interaction effect
-6. repeat 5 for all remaining interaction effects
-7. and assign the rest to the Residual Sums of Squares
-
-Use _Type I_ if you have theoretical considerations to inflate the importance of one of your variables
-
-
-## Digression: sum of squares types | Type II & III {.build}
-
-**Type II Sums of Squares** doesn't "see" interactions
-
-* sequence doesn't matter
-* the variation assigned to each independent variable is accounting for all other independent variables
-* there is no interaction effect effect (if this is true, then it is more powerful than _Type III_)
-
-**Type III Sums of Squares** aka partial sums of squares 
-
-* like II, but with interaction effects
-
-Except for true experiments, Type III is preferable because testing for an interaction effect is yet another condition we would need to test first.
-
 ## 2-Factor ANOVA
 
 * there is no Welch version or something similar :'(
@@ -499,7 +470,7 @@ Except for true experiments, Type III is preferable because testing for an inter
 * the previously used `ezPerm()` in [ez](https://cran.r-project.org/web/packages/ez/) can execute the permutation test with mixed designs (slow, just main effects)
 
 
-## Try it yourself (at home)
+## Homework (graded) | due till 2022-10-27  {.build}
 
 * 2-factors: 
   - Is there any Swiss region, where women/men are especially happy?
@@ -509,6 +480,15 @@ Except for true experiments, Type III is preferable because testing for an inter
   - Can you reproduce the result regarding _psychological distress_ in [Prudenzi, et al. (2022)](https://doi.org/10.1371/journal.pone.0266357)? 
   - The data is available [here](https://doi.org/10.17605/OSF.IO/ZNCWA).
   - Would the result change with a robust approach?
+  
+You can use the starter Notebook on GitHub.
+
+
+## Thank you for your attention! {.flexbox .vcenter}
+
+Next Time:
+
+**Multiple Regression**
 
 
 

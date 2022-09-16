@@ -79,11 +79,17 @@ options(warn=-1)
 * write me until tomorrow for the addition of further options
 
 
-## Resources
+## Resources {.build}
+
+Primary:
 
 * all my materials for this course can be found at the git hub repo [bpiskernik/2022_SA_advanced_statistical_methods](https://github.com/bpiskernik/2022_SA_advanced_statistical_methods) 
 * the slides will be in moodle
+
+Additional:
+
 * the slides contain links to additional material (for those who are interested)
+* check out [bookdown.org](https://bookdown.org/) for free, excellent books about _R_
 
 
 ## Homework | **NOT** graded
