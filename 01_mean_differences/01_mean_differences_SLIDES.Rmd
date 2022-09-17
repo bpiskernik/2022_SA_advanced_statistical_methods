@@ -103,11 +103,11 @@ ggplot(out, aes(data)) +
   * between, within, and mixed design variants
   * multiple measures
   * allows covariates
-* main drawback - if conditions are met it is BLUE, if not it becomes liberal (*p* of rejecting H0 is too big)
+* main drawback - if assumptions are met it is BLUE, if not it becomes liberal (*p* of rejecting H0 is too big)
   * normal distribution
   * variance homogeneity
   
-## The issue of testing the conditions
+## The issue of testing the assumptions
 
 * pre-test are statistical tests as well. They have their own Type I and Type II errors and are dependent on *n*.
 * this causes a special form of a multiple testing scenario
