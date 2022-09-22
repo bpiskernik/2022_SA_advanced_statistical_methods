@@ -1,5 +1,5 @@
 ---
-title: "Advanced statistical methods | UE-L25.01477"
+title: "Advanced statistical methods<br>UE-L25.01477"
 author: "Bernhard Piskernik"
 date: "2022/09/22"
 output: 
@@ -67,7 +67,7 @@ options(warn=-1)
 * 15.12. _your pick II_
 * 22.12. optional: bring your (methodical) problem
 
-## Your picks | voting in Moodle until 13.10.
+## Your picks | voting in Moodle until 13.10. {.build}
 
 * missing data
 * generalized linear model
@@ -76,13 +76,15 @@ options(warn=-1)
 * finding groups in data
 * dimensionality reduction
 * path models
-* write me until tomorrow for the addition of further options
+
+Write me until tomorrow for the addition of further options.
 
 
 ## Resources {.build}
 
 Primary:
 
+* the sessions will be recorded
 * all my materials for this course can be found at the git hub repo [bpiskernik/2022_SA_advanced_statistical_methods](https://github.com/bpiskernik/2022_SA_advanced_statistical_methods) 
 * the slides will be in moodle
 
@@ -99,3 +101,7 @@ Additional:
 * install [Tidyverse](https://www.tidyverse.org/) in RStudio
 * `git clone https://github.com/bpiskernik/2022_SA_advanced_statistical_methods.git`
 * skip through [R for Data Science](https://r4ds.had.co.nz/)
+
+# Questions?
+
+# Thank you for your attention!
