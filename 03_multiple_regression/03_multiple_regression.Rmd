@@ -1,0 +1,459 @@
+---
+title: "Multiple (Linear) Regression"
+author: "Bernhard Piskernik"
+date: "2022-11-03"
+output: 
+  ioslides_presentation:
+        css: ../style.css
+        incremental: true
+        self_contained: true
+---
+
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(magrittr)
+library(plotly)
+library(kableExtra)
+library(datapasta)
+options(warn=-1)
+options("kableExtra.html.bsTable" = T)
+theme_set(theme_minimal())
+
+```
+
+```{r data_load, include=FALSE}
+# retrieve data of project "Materialism & personality" from https://doi.org/10.3886/E101900V1
+# attention: labels are Polish, so some transformation is necessary to facilitate work
+
+df_mat <- haven::read_sav('../data/materalism_and_personality/Study_III.sav') %>%
+  # use labels instead of values for Gender & syt_rodz
+  mutate(
+    GENDER = haven::as_factor(GENDER),
+    syt_rodz = haven::as_factor(syt_rodz),
+    # recode to English labels
+    syt_rodz = forcats::fct_recode(
+      syt_rodz,
+      'single'='osoba samotna',
+      'civil partnership'='w związku partnerskim',
+      'married'='w związku małżeńskim',
+      'other'='inne'
+      )
+    ) %>%
+  # rename columns 1: all to lower case
+  rename_all(tolower) %>%
+  # rename columns 2: use full, English words
+  rename(
+    marital_status = syt_rodz,
+    materialism = mvs_total,
+    neuroticism = neurot,
+    life_satisfaction = swls
+  ) %>%
+  # limit to used columns
+  select(
+    gender, marital_status, materialism, neuroticism, life_satisfaction
+  )
+  
+```
+
+```{r helper, include=FALSE}
+toTable <- function(df){
+  df %>% kable() %>% kable_styling()
+  }
+```
+
+## The Basic Problem{.build}
+
+Hypotheses about the relationship between a dependent variable (regressand, response, outcome) and a set of independent variables (regessors, predictors, features).
+
+Model: $\boldsymbol{y}=\boldsymbol{X\beta}+\boldsymbol{\epsilon}$
+
+Most commonly, $\boldsymbol{\beta}$ is estimated with ordinary least squares (sum of squared residuals is minimized).
+
+A typical questions are: 
+
+* _How are variables A, B, C, ... linked to variable Y?_
+* _Can A, B, C, D ... explain/predict Y_?
+
+
+## Assumptions of Ordinary Least Squares Regression {.build}
+
+The acronym _LINE_ can be used to recall the assumptions required for making inferences and predictions with models based on OLS.  If we consider a simple linear regression with just a single predictor _X_, then:
+
+- **L:** There is a linear relationship between _Y_ and _X_,
+- **I:** The errors are independent---there's no connection between how far any two points lie from the regression line, 
+- **N:** _Y_ is normally distributed at each level of _X_, and
+- **E:** The variance of _Y_ is equal for all levels of _X_.
+
+## Assumptions of Ordinary Least Squares Regression {.build .columns-2 .smaller}
+
+```{r OLSassumptions, fig.align = "center", echo=FALSE, message = FALSE, fig.width = 4}
+## Sample data for graph of OLS normality assumption
+##   Code from https://stackoverflow.com/questions/31794876/ggplot2-how-to-curve-small-gaussian-densities-on-a-regression-line?rq=1
+set.seed(42)
+dat <- data.frame(x=(x=runif(10000, 0, 50)),
+                  y=rnorm(10000, 10*x, 100))
+## breaks: where you want to compute densities
+breaks <- seq(0, max(dat$x), len=5)
+dat$section <- cut(dat$x, breaks)
+## Get the residuals
+dat$res <- residuals(lm(y ~ x, data=dat))
+## Compute densities for each section, flip the axes, add means of sections
+## Note: densities need to be scaled in relation to section size (2000 here)
+dens <- do.call(rbind, lapply(split(dat, dat$section), function(x) {
+  d <- density(x$res, n=5000)
+  res <- data.frame(x=max(x$x)- d$y*2000, y=d$x+mean(x$y))
+  res <- res[order(res$y), ]
+  ## Get some data for normal lines as well
+  xs <- seq(min(x$res), max(x$res), len=5000)
+  res <- rbind(res, data.frame(y=xs + mean(x$y),
+                               x=max(x$x) - 2000*dnorm(xs, 0, sd(x$res))))
+  res$type <- rep(c("empirical", "normal"), each=5000)
+  res
+}))
+dens$section <- rep(levels(dat$section), each=10000)
+ggplot(dat, aes(x, y)) +
+  geom_point(size = 0.1, alpha = 0.25) +
+  geom_smooth(method="lm", fill=NA, lwd=2, color="blue") +
+  geom_path(data=dens[dens$type=="normal",], 
+            aes(x, y, group=section), color="orange", lwd=1.1) +
+  theme_bw() +
+  geom_vline(xintercept=breaks, lty=2)
+```
+
+
+These assumptions are depicted in the figure  
+
+- **L:** The mean value for _Y_ at each level of _X_ falls on the regression line.
+- **I:** We'll need to check the design of the study to determine if the errors (vertical distances from the line) are independent of one another.
+- **N:** At each level of _X_, the values for _Y_ are normally distributed.
+- **E:** The spread in the _Y_'s for each level of _X_ is the same.
+
+
+## How to deal with those assumptions | General {.build .smaller}
+
++ don't test them 
+  * dependent on _n_
+  * those have Type 1 & 2 errors as well -> due to serial testing the global error rates are off
++ visually inspect variables before analysis and residuals afterwards
++ use robust techniques
+  * bootstrapping - should be able to deal with moderate heteroscedasticity, outliers, influential cases
+  * trimming, winsorizing
+  * robust least squares, e.q. **I**teratively **R**eweighted **L**east **S**quares (IRLS). **Base idea of IRLS**: Cases with bigger residuals get less weight. **How to**: just replace `lm()` with `MASS::rlm()`
++ robust techniques can be used alone or combined; **Tip**: always use bootstrapping and add rest when needed   
+
+
+## How to deal with those assumptions | Independence of errors
+
+* there is no test/plot to evaluate the independence assumption
+* evidence for lack of independence comes from knowing about the study design and methods of data collection
+* use appropriate analyses (Multilevel regression)
+* sometimes people recommend ignoring the nested structure, when the intraclass correlation (ICC) is low -- ignore them
+
+
+## How to deal with those assumptions | Linearity and Normal distribution
+
+* Generalized linear models
+* non-linear transformations of **y**
+* add non-linear transformations of **x**s
+  + x²
+  + log(x) 
+  + x1*x2
+  + ...
+  
+## How to deal with those assumptions | Homoscedasticity
+
+  * often a modification/transformation of _y_ is helpful
+  * especially, the use of **rates**, e.g.
+    + accidents/population instead of total number of accidents
+    + BMI instead of weight
+    + count/time unit instead of count
+    + ...
+    
+    
+# Let's continue with an example
+
+
+## Research question {.build .flexbox .vcenter}
+
+Can **life satisfaction** be inferred from 
+
+* marital status
+* materialism
+* neurotiscism
+
+? 
+
+
+## Data {.build .smaller}
+
+Source: Górnik-Durose, Malgorzata E. Materialism & personality. Ann Arbor, MI: Inter-university Consortium for Political and Social Research [distributor], 2020-04-15. https://doi.org/10.3886/E101900V1
+
+Publication: Górnik-Durose, M. E. (2020). Materialism and well-being revisited: The impact of personality. _Journal of Happiness Studies: An Interdisciplinary Forum on Subjective Well-Being_, _21_(1), 305–326. https://doi.org/10.1007/s10902-019-00089-8
+
+[_Note_: we will use data from Study 3, but carry out other analyses than described in the original paper]
+
+Variables we will use:
+
+* **marital_status** [single/civil partnership/married/other]
+* **materialism** [Polish version of the 9-item Material Values Scale]
+* **neuroticism** [subscale of Polish version of NEO Five-Factor Inventory]
+* **life_satisfaction** [Polish version of Satisfaction with Life Scale]
+
+
+
+## Inital exploratory analyses | skim through the raw data 
+
+```{r, echo=FALSE, message=FALSE}
+df_mat %>% rmarkdown::paged_table()
+```
+## Inital exploratory analyses | univariate {.build .smaller .columns-2 }
+
+
+```{r fig.width=4}
+df_mat %>% DataExplorer::plot_bar()
+```
+
+
+
+```{r fig.width=4}
+df_mat %>% DataExplorer::plot_density()
+```
+
+
+## Inital exploratory analyses | bivariate
+
+```{r, echo=FALSE, message=FALSE}
+df_mat %>% select(-gender) %>% GGally::ggpairs(mapping = aes(alpha = 0.5), columns = c('marital_status', 'materialism', 'neuroticism', 'life_satisfaction')) 
+
+```
+
+## Let's start simple | simple linear regression with a continuous predictor {.build .smaller .reduceTopMarginText}
+
+Starting point: _life satisfaction_ as a function of _materialism_ 
+
+Model 1: $Y_{i}=\beta_0 + \beta_1 \text{materialism}_i + \epsilon_i$
+
+```{r}
+model1 <- lm(life_satisfaction ~ materialism, data = df_mat)
+summary(model1)
+```
+
+## Centering {.build}
+
+= subtracting the mean value from all values -> new mean = 0
+
+<center>
+$c_{i}=x_i - \overline{x}$
+</center>
+
+* applicable to $\boldsymbol{y}$ and $\boldsymbol{X}$
+* it is a linear transformation and only changes intercept (intercept = estimated value of the DV if all IVs were 0)
+* can facilitate interpretation of the intercept, if **0** is no meaningful reference (e.g. height of person), but the mean value is
+* reduce collinearity if non-linear transforms (e.g., squares, interactions, ...) 
+
+
+## Standardizing {.build .smaller}
+
+= centering + scaling with _SD_
+
+<center>
+$z_i=\frac{x - \overline{x_i}}{s_x}$
+</center>
+
+* can facilitate interpretation of the weights (unit of change is SD instead of the original scale)
+* types:
+  - **yx standardization** both _y_ and _x_ are standardized: if _x_ changes by $1{s_x}$ , then _y_ changes by $\beta_x s_y$
+  - **y standardization** only _y_ is standardized: if _x_ changes by 1 unit, then _y_ changes by $\beta_x s_y$
+  - **x standardization** only _x_ is standardized: if _x_ changes by $1{s_x}$ , then _y_ changes by $\beta_x$ units
+* changes weights; SE scale likewise -> no change in $p\text{s}$ (if there is no interaction term)
+* **don't standardize binary/categorical predictors**
+
+## Centering/Scaling for Model 1? {.build .smaller}
+
+```{r}
+df_z <- df_mat %>% mutate_if(is.numeric, scale)
+```
+
+```{r}
+model2 <- lm(life_satisfaction ~ materialism, data = df_z)
+summary(model2)
+```
+
+## Continue simple | simple linear regression with a categorical predictor {.build .smaller}
+
+```{r, class.source='bottomMargin-10'}
+model3 <- lm(life_satisfaction ~ marital_status, data = df_z)
+summary(model3)
+```
+
+## Categorical predictors {.build .smaller}
+
+1 variable and 1 $\beta$ are not enough (#categories - 1 are needed)
+
+* **dummy coding** - compares each level to the reference level, intercept being the cell mean of the reference group (_R_ did that just before)
+
+```{r, echo=FALSE, message=FALSE}
+
+tibble::tribble(
+          ~x, ~x1, ~x2, ~x3,
+    "single",  0L,  0L,  0L,
+  "civil p.",  1L,  0L,  0L,
+   "married",  0L,  1L,  0L,
+     "other",  0L,  0L,  1L
+  ) %>% 
+  kable() %>%
+  kable_styling()
+
+```
+
+* **simple coding** - compares each level to the reference level, intercept being the grand mean (instead of 0/1, (-1/k)/([k-1]/k))
+* **deviation coding** - compares each level to the grand mean 
+* **difference coding** - compares adjacent levels (forward: with next, backward: with previous)
+* see e.g. R package [contrast](https://cran.r-project.org/web/packages/contrast/) for more (orthogonal polynomial, Helmert, ...)
+
+## Multiple Regression OLS - not robust {.smaller}
+
+```{r, class.source='bottomMargin-10'}
+model4 <- lm(life_satisfaction ~ neuroticism + materialism + marital_status, data = df_z)
+summary(model4)
+```
+
+## Residual Analysis
+
+
+
+```{r}
+par(mfrow=c(2,2))
+plot(model4)
+```
+
+```{r, include=FALSE}
+# reset to one chart per display
+par(mfrow=c(1,1))
+```
+
+## Residuals vs. Fitted {.build .columns-2}
+
+```{r, fig.width=4, echo=FALSE, message=FALSE}
+plot(model4, which = 1)
+
+```
+
+* can be used to check the Linearity assumption
+* residuals should be patternless around $y = 0$
+* if not, there is an unaccounted pattern
+
+
+## Normal Q-Q {.build .columns-2}
+
+```{r, fig.width=4, echo=FALSE, message=FALSE}
+plot(model4, which = 2)
+```
+
+* can be used to check the Normality assumption
+* if residuals deviate from the line, they do not conform to a theoretical normal curve
+
+
+## Scale-Location {.build .columns-2}
+
+```{r, fig.width=4, echo=FALSE, message=FALSE}
+plot(model4, which = 3)
+```
+
+* can be used to check Homoscedasticity assumption
+* positive/negative trends indicate that variability is not constant
+
+
+## Residuals vs Leverage {.build .columns-2}
+
+```{r, fig.width=4, echo=FALSE, message=FALSE}
+plot(model4, which = 5)
+```
+
+* can be used to check for influential cases and outliers
+* points with high leverage (unusual **X**-values) **and/or** high absolute residuals can have an undue influence on model parameters
+
+## Bootstrapped Regression {.smaller .reduceTopMarginCode}
+
+```{r}
+set.seed(42) # for reproducability
+bt_regs <- df_z %>% 
+  rsample::bootstraps(1000) %>% # better 10k - I just don't want to wait
+  pull(splits) %>% 
+  map_dfr(~lm(life_satisfaction ~ neuroticism + materialism + marital_status, data = .) %>% 
+            broom::tidy())
+bt_regs %>% 
+  group_by(term) %>% 
+  dplyr::summarize(
+    est_mean = mean(estimate),
+    est_median = median(estimate),
+    low=quantile(estimate, .025),
+    high=quantile(estimate, .975)
+  ) %>% toTable()
+```
+
+
+## Bootstrapped Regression
+
+```{r, echo=FALSE, message=FALSE}
+p <- bt_regs %>% 
+  ggplot(aes(x=estimate, fill=term)) +
+    geom_histogram() +
+    facet_wrap(~term, nrow=2) +
+    theme(legend.position = "none")
+
+ggplotly(p) %>%
+  config(displayModeBar = FALSE)
+  
+```
+
+## Bootstrapped Regression {.smaller .build}
+
+```{r, include=FALSE}
+bt_summary <- bt_regs %>% 
+  group_by(term) %>% 
+  dplyr::summarize(
+    est_mean = mean(estimate),
+    est_median = median(estimate),
+    low=quantile(estimate, .025),
+    high=quantile(estimate, .975)
+  )
+```
+
+
+```{r}
+model5 <- model4
+coeffs <- setNames(as.list(bt_summary$est_mean), bt_summary$term)
+for (i in 1:length(coef(model5))){
+  model5$coefficients[i] <- coeffs[[names(coef(model5))[i]]]
+}
+```
+
+
+```{r, echo=FALSE, message=FALSE}
+tibble(
+    coef = names(coef(model5)),
+    model4 = model4$coefficients,
+    model5 = model5$coefficients
+  ) %>%
+  mutate_if(is.numeric, round, 3) %>%
+  toTable()
+```
+
+
+
+
+## Bootstrapped Regression {.build .smaller}
+
+* a 95% confidence interval for each parameter can be found by taking the middle 95% of each bootstrap distribution [aka _percentile method_]. If the interval includes 0, then the parameter is non-significant for chosen $\alpha$-level.
+* to get omnibus information, use the mean/median model to get predicted values and calculate what you need
+
+```{r}
+m5_predictions <- model5 %>% predict(df_z)
+caret::postResample(m5_predictions, df_z$life_satisfaction)
+```
+
+* even better: Bootstrap the calculation to get confidence intervals for everything 
+* if there are no assumption violations, bootstrapping yields ~ same results as standard OLS
+* if there are assumption violations, the results are more robust
