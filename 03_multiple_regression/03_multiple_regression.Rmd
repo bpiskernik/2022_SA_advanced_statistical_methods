@@ -228,6 +228,20 @@ df_mat %>% select(-gender) %>% GGally::ggpairs(mapping = aes(alpha = 0.5), colum
 
 ```
 
+## Digression: Multicollinearity {.build .smaller}
+
+* the interpretation of a regression coefficient is that it represents the mean change in the DV for each 1 unit change in the IV _if all others are held constant_
+* the last part does not work if IVs are correlated
+* coefficient estimation becomes unstable; ultimately, it increases the **SE**s (affects *p*s)
+* can be quantified with **V**ariance **I**nflation **F**actors (VIF > 5 is critical)
+* in R you can calculate it with `car::vif(model)`
+* solutions:
+  - remove part of the highly correlated IVs
+  - combine them (sums, PCA, ...)
+  - use regularization
+
+
+
 ## Let's start simple | simple linear regression with a continuous predictor {.build .smaller .reduceTopMarginText}
 
 Starting point: _life satisfaction_ as a function of _materialism_ 
@@ -457,3 +471,47 @@ caret::postResample(m5_predictions, df_z$life_satisfaction)
 * even better: Bootstrap the calculation to get confidence intervals for everything 
 * if there are no assumption violations, bootstrapping yields ~ same results as standard OLS
 * if there are assumption violations, the results are more robust
+
+
+## Regression with Interaction aka Moderation {.build}
+
+* when an interaction is added, centering does change _p_-values (see [Afshartous & Preston, 2011](https://doi.org/10.1080/10691898.2011.11889620))
+* instead there is a range of significance (subset within a continuum of conditional effects in that is statistically significant)
+* therefore, **DON'T** call it _main_ and _interaction_ effect
+* better: **linear** and **conditional** effect
+* if you include interaction add:
+  - interaction plots
+  - [Johnson-Neyman intervals](https://doi.org/10.1007/BF02288864)
+  
+## Regression with Interaction | Model {.smaller .reduceTopMarginCode}
+
+```{r, class.source='bottomMargin-10'}
+model6 <- lm(life_satisfaction ~ neuroticism * materialism + marital_status, data = df_z)
+summary(model6)
+```
+
+## Interaction Plot 
+
+```{r}
+interactions::interact_plot(
+  model6, pred = materialism, modx = neuroticism, plot.points = T)
+```
+
+## Johnson-Neyman intervals {.reduceTopMarginCode .smaller}
+
+```{r, class.source='bottomMargin-10', fig.height=3.7}
+interactions::johnson_neyman(model6, pred=materialism, modx=neuroticism, control.fdr=T)
+```
+
+
+## Homework (graded) | due till 2022-11-10   {.flexbox .vcenter}
+
+* build a _robust_ model (without interaction) using the function `MASS::rlm()`
+* describe the differences you see compared to _model4_
+
+
+## Thank you for your attention! {.flexbox .vcenter}
+
+Next Time (2022-11-17):
+
+**Nested Data**
