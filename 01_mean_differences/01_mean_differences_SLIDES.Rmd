@@ -281,7 +281,7 @@ ggplotly(p) %>%
 
 
 
-## Digression: sum of squares types | Type I {.build}
+## Digression: sum of squares types | Type I {.build .smaller}
 
 **Type I Sums of Squares** is sequential 
 
