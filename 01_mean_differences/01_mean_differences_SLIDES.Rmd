@@ -1,5 +1,5 @@
 ---
-title: "Mean differences - Theory"
+title: "Mean differences - Part I"
 author: "Bernhard Piskernik"
 date: "2022/10/06"
 output: 
@@ -39,7 +39,7 @@ Does the mean
 | random noise                            | high    | low    | potential confounding factors are hold constant by using the same person  |
 | required sample size                    | high    | low    | participants contribute multiple data points + less noise                 |
 
-## Sample size example (2 groups)
+## Sample size example (2 groups) {.build}
 
 ```{r}
 params <- list(sig.level = 0.05, power = 0.80, d = 0.25)
@@ -302,7 +302,7 @@ Use _Type I_ if you have theoretical considerations to inflate the importance of
 
 * sequence doesn't matter
 * the variation assigned to each independent variable is accounting for all other independent variables
-* there is no interaction effect effect (if this is true, then it is more powerful than _Type III_)
+* it assumes no interaction effect (if this is true, then it is more powerful than _Type III_)
 
 **Type III Sums of Squares** aka partial sums of squares 
 
