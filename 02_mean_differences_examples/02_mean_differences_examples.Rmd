@@ -57,7 +57,7 @@ df_1f <- mosaich %>%
 
 
 
-## One factoral design {.build}
+## One factoral design
 
 Research question: *Does happiness differ between the Swiss regions?*
 
@@ -373,7 +373,7 @@ WRS2::t1waybt(
   ) 
 ```
 
-The effect size ξ was proposed by [Wilcox & Tian (2011)](https://doi.org/10.1080/02664763.2010.498507) and is heteroscedastic generalization of Cohen's _d_.
+The effect size $\xi$ was proposed by [Wilcox & Tian (2011)](https://doi.org/10.1080/02664763.2010.498507) and is heteroscedastic generalization of Cohen's _d_.
 
 ## Analysis - Robust | Hypothesis 2 {.smaller .build .reduceTopMarginText}
 
@@ -486,7 +486,7 @@ You can use the starter Notebook on GitHub.
 
 ## Thank you for your attention! {.flexbox .vcenter}
 
-Next Time:
+Next Time (2022/11/03):
 
 **Multiple Regression**
 
