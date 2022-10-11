@@ -1,0 +1,313 @@
+---
+title: "Mean Differences - Homework"
+author: "please insert your names here"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Tasks
+
+* TASK 1 (2-factors) 
+  - Is there any Swiss region, where women/men are especially happy?
+  - use the variables `H1` (happy/unhappy), `Nuts2` (region) and `DEMO1` (gender) from the [MOSAiCH](https://doi.org/10.48573/t659-e039) data set
+  
+* TASK 2 (mixed)
+  - Can you reproduce the result regarding _psychological distress_ in [Prudenzi, et al. (2022)](https://doi.org/10.1371/journal.pone.0266357)? 
+  - The data is available [here](https://doi.org/10.17605/OSF.IO/ZNCWA).
+  - Would the result change with a robust approach?
+
+# Preparations
+
+## Libraries
+
+Load required libraries
+
+```{r load_libraries}
+# just run this chunk
+
+library(tidyverse)
+library(WRS2)
+```
+
+
+## Data
+
+1. Make sure that the [MOSAiCH](https://doi.org/10.48573/t659-e039) data-set is extracted at _[your individual folder path]/2022_SA_advanced_statistical_methods/data_.
+2. Make sure that the [ACT for NHS staff data](https://doi.org/10.17605/OSF.IO/ZNCWA) is extracted at _[your individual folder path]/2022_SA_advanced_statistical_methods/data_.
+
+
+# Task 1
+
+## Prep
+
+Get data into shape.
+
+```{r prepare_mosaich_data}
+# just run this chunk
+
+df_mosaich <- haven::read_sav('../data/MOSAiCH_2021/swissubase_2033_1_0/2033_MOSAiCH2021_Data_E_v1.0.0.sav') %>%
+  # use labels instead of values for Nuts2
+  mutate(
+    Nuts2 = haven::as_factor(Nuts2),
+    DEMO1 = haven::as_factor(DEMO1)
+    ) %>%
+  # reduce to needed variables
+  select(IDNO, Nuts2, DEMO1, H1) %>%
+  # remove missings
+  drop_na() %>%
+  mutate(
+    IDNO = as_factor(IDNO),
+    # remove missing factor levels
+    Nuts2 = forcats::fct_drop(Nuts2),
+    DEMO1 = forcats::fct_drop(DEMO1),
+    H1 = unclass(H1)
+    )
+```
+
+Take a look at data to see how it is structured
+
+```{r see_mosaich_data}
+# just run this chunk
+
+df_mosaich %>%
+  # limit to top 20 rows
+  slice_head(n=20)
+```
+
+## Optional
+
+Explore the data (this is optional for the homework).
+
+```{r}
+# ADD YOUR CODE
+
+
+```
+
+
+## Parametric
+
+We start by running a parametric 2-way Anova
+
+```{r}
+# just run this chunk
+para_2way <- aov(H1 ~ Nuts2*DEMO1, data = df_mosaich)
+para_2way
+```
+
+Let's check the parameter results
+
+```{r}
+# just run this chunk
+para_2way %>% summary()
+```
+
+### Question
+
+1. Please interpret the results.
+2. Which parameter relates to the research question "Is there any Swiss region, where women/men are especially happy?" and how would you answer it based on the results?
+
+### Answer
+
+1. [YOUR ANSWER]
+2. [YOUR ANSWER]
+
+
+## Robust
+
+Choose a robust version of the parametric test above in the [WRS2](https://cran.r-project.org/web/packages/WRS2/WRS2.pdf) and carry it out.
+
+Start with the omnibus test.
+
+```{r robust_2way_omnibus}
+# YOUR CODE
+
+
+```
+
+Also conduct a robust post-hoc test.
+
+```{r robust_2way_postHoc}
+# YOUR CODE
+
+```
+
+
+_Note_: WRS2 does not print the labels of levels but just their number. To facilitate your interpretation, the code below lists the labels with the according number.
+
+```{r levels_nuts2}
+# just run this chunk
+df_mosaich %>%
+  select(Nuts2) %>%
+  distinct() %>%
+  mutate(number = as.numeric(as.factor(Nuts2))) %>%
+  arrange(number)
+```
+
+```{r levels_demo1}
+# just run this chunk
+df_mosaich %>%
+  select(DEMO1) %>%
+  distinct() %>%
+  mutate(number = as.numeric(as.factor(DEMO1))) %>%
+  arrange(number)
+```
+
+
+### Question
+
+1. Please interpret the results.
+2. Which result relates to the research question _Is there any Swiss region, where women/men are especially happy?_ and how would you answer it based on the results?
+
+### Answer
+
+1. [YOUR ANSWER]
+2. [YOUR ANSWER]
+
+
+# TASK 2
+
+## Prep
+
+_Note_: In case you have renamed the folder/file-name (the names defined within the zip-file might be too long for Windows-systems), please adjust the path in the chunk below accordingly.
+
+```{r}
+# just run this chunk
+df_act_raw <- readxl::read_xlsx('../data/a_workplace_acceptance_and_commitment_therapy_intervention_for_improving_healthcare_staff_psychological_distress/Data _ACT_for_NHS_RCT_Trial_OPS_Prudenzi_et_al_22.xlsx')
+```
+
+Take a look at data to see how it is structured.
+
+```{r see_act_data}
+# just run this chunk
+
+df_act_raw %>%
+  # limit to top 20 rows
+  slice_head(n=20)
+```
+
+We transform the data into the so called [long](https://www.statology.org/long-vs-wide-data/)-format, because this is required by most analysis functions suitable for this task.
+
+```{r}
+# just run this chunk
+
+df_act_long <- df_act_raw %>%
+  # limit to required columns
+  select(
+    starts_with('Psychological_distress'),
+    `Experimental_Control participant`,
+    ID
+  ) %>% 
+  # wide to long
+  pivot_longer(
+    cols = starts_with('Psychological_distress'),
+    names_to = 'time',
+    values_to = 'psy_distress'
+  ) %>%
+  # clean strings
+  mutate(
+    time = stringr::str_replace(time, 'Psychological_distress_', ''),
+    time = forcats::as_factor(time),
+    # convert to factor and use new name
+    group = forcats::as_factor(`Experimental_Control participant`)
+  ) %>%
+  # drop not needed column
+  select(-`Experimental_Control participant`)
+```
+
+
+Take a look at data to see how it is structured now. 
+
+Optional: you might want to check `levels(df_act_long$time)` as well to get the order of time levels. If it doesn't suit your needs you can use `forcats::fct_relevel()` to change it. Use `?forcats::fct_relevel()` to see its manual entry.
+
+```{r see_act_long_data}
+# just run this chunk
+
+df_act_long %>%
+  # limit to top 20 rows
+  slice_head(n=20)
+```
+
+
+## Optional
+
+Explore the data (this is optional for the homework).
+
+```{r}
+# ADD YOUR CODE
+
+
+```
+
+
+## Parametric
+
+
+
+Conduct a parametric mixed ANOVA with `ez::ezANOVA()`. See its manual with `?ez::ezANOVA()`. You don't need to decompose any effects - just the omnibus test is correct.
+
+
+```{r}
+# FILL IN THE CORRECT VARIABLES
+
+para_mixed <- ez::ezANOVA(
+  df_act_long,
+  wid = FILL_IN,
+  dv = FILL_IN,
+  within = FILL_IN,
+  between = FILL_IN
+)
+
+para_mixed
+```
+
+### Question
+
+1. Please interpret the results.
+2. Do the results align with those in the paper? (you don't need to check the partial $\eta$² or the decomposed effects)
+
+### Answer
+
+1. [YOUR ANSWER]
+2. [YOUR ANSWER]
+
+
+## Robust
+
+## Robust
+
+Choose a robust version of the parametric test above in the [WRS2](https://cran.r-project.org/web/packages/WRS2/WRS2.pdf) and carry it out.
+
+
+```{r robust_mixed}
+# YOUR CODE
+
+
+```
+
+
+### Question
+
+1. Please interpret the results.
+2. Do the results align with those in the paper?
+
+
+### Answer
+
+1. [YOUR ANSWER]
+2. [YOUR ANSWER]
+
+
+
+# At last
+
+* check that you have
+  * added your name at the top of the document as author
+  * added all missing code segments
+  * answered all questions
+* knit to PDF or HTML
+* upload to moodle
