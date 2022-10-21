@@ -1,0 +1,188 @@
+---
+title: "Nested Data"
+author: "Bernhard Piskernik"
+date: "2022-11-17"
+output: 
+  ioslides_presentation:
+        css: ../style.css
+        incremental: true
+        self_contained: true
+---
+
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(magrittr)
+library(plotly)
+library(kableExtra)
+library(datapasta)
+library(lme4)
+options(warn=-1)
+options("kableExtra.html.bsTable" = T)
+theme_set(theme_minimal())
+```
+
+```{r data_load, include=FALSE}
+# retrieve data of the article "Determinants of healthcare worker turnover in intensive care units: A micro-macro multilevel analysis" https://doi.org/10.1371/journal.pone.0251779
+
+# Individual-level factors data: https://doi.org/10.1371/journal.pone.0251779.s010
+# Intensive care unit-level factors data: https://doi.org/10.1371/journal.pone.0251779.s011
+
+# add the folder /journal.pone.0251779 into /data and copy both files into it
+
+df_individual <- read_csv2('../data/journal.pone.0251779/journal.pone.0251779.s010.csv')
+df_unit <- read_csv2('../data/journal.pone.0251779/journal.pone.0251779.s011.csv')
+
+df_ICU <- df_individual %>%
+  left_join(df_unit)
+```
+
+```{r}
+df_individual
+```
+
+```{r}
+df_unit
+```
+
+## The Basic Problem {.build}
+
+Multilevel models are developed for the analysis of hierarchically structured data. A hierarchy consists of lower level observations nested within higher level(s).
+
+_Example_: 
+
+* Level 1: measurement at one time
+* Level 2: student
+* Level 3: class
+* Level 4: school
+* Level 5: district
+* ...
+
+## The linear multilevel model {.build}
+
+Special regression that is suitable for hierarchical data.
+
+Difference to _traditional_ regression:<br>More than one error term (1+ per level)
+
+
+Let _i_ be the index for Level 1 units ($i$ = 1,...,$n_j$) and _j_ be the index for Level 2 units ($j$ = 1,...,$J$) then the DV $Y_{ij}$ at Level 1 is explained by:
+
+<center>
+$Y_{ij}=\alpha_j+\beta_jX_{ij}+\epsilon_{ij}$
+
+$\alpha_j= \mu+\gamma Z_j + u_j$<br>
+$\beta_j=\theta+ \eta Z_j + v_j$
+</center>
+<br>
+where $X_{ij}$ is a Level 1 variable, and $Z_j$ is a Level 2 variable
+
+## Why we can't just use normal regression. {.flexbox .vcenter}
+
+1. faithful to the data structure
+2. individuals within a group are similar (_correlated_) and therefor include less information than independent individuals (effective _n_ is overestimated and SEs are too small)
+3. effects on different levels don't necessarily need be the same
+
+## similar cases share information
+
+```{r, echo=FALSE, message=FALSE}
+set.seed(4242)
+
+rbind(
+    MASS::mvrnorm(10, mu=c(1,2), Sigma=matrix(c(1,0.25,0.25,1),2,2)),
+    MASS::mvrnorm(10, mu=c(4,3), Sigma=matrix(c(1,0.25,0.25,1),2,2)),
+    MASS::mvrnorm(10, mu=c(7,10), Sigma=matrix(c(1,0.25,0.25,1),2,2)),
+    MASS::mvrnorm(10, mu=c(10,10), Sigma=matrix(c(1,0.25,0.25,1),2,2))
+  ) %>%
+  as_tibble() %>%
+  mutate(group = rep(c('A', 'B', 'C', 'D'), each=10)) %>%
+  ggplot(aes(x=V1, y=V2)) +
+    ggforce::geom_mark_ellipse(expand = 0,aes(fill=group))+
+    geom_point(size=2, aes(color=group)) +
+    geom_smooth(method=lm, se=F)
+```
+
+Would the regression line look much different with just one point per group?
+
+## effects on different levels can differ
+
+```{r, echo=FALSE, message=FALSE}
+set.seed(4242)
+# Create data where multilevel model gives different result 
+# than OLS regression.  Hopefully see differences in both
+# coefficients and SEs
+# Simulation 1 - OLS coefficient is wrong direction
+subject = c(rep(1,10),rep(2,10),rep(3,10),rep(4,10))
+lambda0 = c(rep(10,10),rep(20,10),rep(30,10),rep(40,10))
+lambda1 = rep(-0.5,40)
+previj = c(1:10,4:13,7:16,10:19)
+eij = rnorm(40,0,1)
+yij = lambda0 + lambda1*previj + eij
+simdata = data.frame(subject=subject,lambda0=lambda0,
+  lambda1=lambda1,previj=previj,eij=eij,yij=yij)
+#plot(yij~previj)
+olsreg.sim = lm(yij~previj)
+#summary(olsreg.sim)
+#AIC(olsreg.sim); BIC(olsreg.sim)
+mlm.sim = lmer(yij~previj + (1|subject), data=simdata)
+#summary(mlm.sim)
+# ggplot for first simulation
+ints.sim = fixef(mlm.sim)[1] + ranef(mlm.sim)[[1]][1]
+slopes.sim = rep(fixef(mlm.sim)[2],4)
+subj.sim = c("Group 1", "Group 2", 
+             "Group 3", "Group 4")
+sim1.plot = data.frame(id=subj.sim,
+  ints.sim=ints.sim[[1]],slopes.sim=slopes.sim)
+sim1.plot2 = data.frame(model=c("MultiLevel","LinReg"),
+  int2=c(fixef(mlm.sim)[1],
+  summary(olsreg.sim)$coefficients[1,1]),
+  slp2=c(fixef(mlm.sim)[2],
+  summary(olsreg.sim)$coefficients[2,1]))
+
+ggplot(data=simdata, aes(x=previj,y=yij, color=forcats::as_factor(subject))) +  
+  geom_point(size=2, show.legend=T) + 
+  geom_smooth(method=lm, se=F, show.legend=T) +
+  geom_abline(data=sim1.plot2, aes(intercept=int2, slope=slp2, 
+    linetype=model), size=1, show.legend=T) +
+  theme(legend.title = element_blank()) +
+  scale_x_continuous(name="V1",
+                     limits=c(0,20)) +
+  scale_y_continuous(name="V2", limits=c(0,40))+
+  guides(colour = "none")
+
+
+```
+
+## Another thing is different: CENTERING {.build}
+
+2 Options:
+
+* **grand mean centering** 
+  - centering like in normal regression
+  - linear transformation -> only intercept changes (model is equivalent)
+* **group mean centering**
+  - subtract the individual's group mean from the individual's score
+  - parameters change -> model is NOT equivalent
+  - group means can be added as group predictors (to disentangle micro and macro level
+contributions)
+
+
+## When to center how? {.build .smaller .reduceTopMarginText}
+
+This is a complex question (e.g., see [Hofman & Gavin (1998)](https://doi.org/10.1016/S0149-2063(99)80077-4), [Paccagnella (2006)](http://journals.sagepub.com/doi/10.1177/0193841X05275649), [Enders & Tofighi (2007)](http://dx.doi.org/10.1037/1082-989X.12.2.121), and [Hamaker & Grasman (2015)](https://www.frontiersin.org/articles/10.3389/fpsyg.2014.01492) for discussions) with no easy answer.
+
+* Raw:
+  - if one is interested in intercept and intercept variance when predictor is 0
+  
+* Grand mean centering:
+  - often used for higher level variable to facilitate interpretation
+  - interest in a L2 predictor and want to control for L1 covariates
+  - interest in interactions between L2 variables
+  
+* Group mean centering:
+  - purpose is disentangling effects on different levels (add group means as predictor)
+  - if multilevel collinearity is high (e.g., student's age at L1 and school level at L2)
+  - L1 association between $X$ and $Y$ is of substantive interest
+  - cross-level interactions and L1 interactions
+  
+**Correct centering depends solely on your question!** Use different centerings for different questions (even in 1 analyses block).
+
