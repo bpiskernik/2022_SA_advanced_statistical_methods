@@ -80,10 +80,10 @@ A typical questions are:
 
 The acronym _LINE_ can be used to recall the assumptions required for making inferences and predictions with models based on OLS.  If we consider a simple linear regression with just a single predictor _X_, then:
 
-- **L:** There is a linear relationship between _Y_ and _X_,
-- **I:** The errors are independent---there's no connection between how far any two points lie from the regression line, 
-- **N:** _Y_ is normally distributed at each level of _X_, and
-- **E:** The variance of _Y_ is equal for all levels of _X_.
+- **L:** There is a **linear** relationship between _Y_ and _X_,
+- **I:** The errors are **independent**---there's no connection between how far any two points lie from the regression line, 
+- **N:** _Y_ is **normally** distributed at each level of _X_, and
+- **E:** The variance of _Y_ is **equal** for all levels of _X_.
 
 ## Assumptions of Ordinary Least Squares Regression {.build .columns-2 .smaller}
 
@@ -438,7 +438,7 @@ bt_summary <- bt_regs %>%
 
 ```{r}
 model5 <- model4
-coeffs <- setNames(as.list(bt_summary$est_mean), bt_summary$term)
+coeffs <- setNames(as.list(bt_summary$est_median), bt_summary$term)
 for (i in 1:length(coef(model5))){
   model5$coefficients[i] <- coeffs[[names(coef(model5))[i]]]
 }
