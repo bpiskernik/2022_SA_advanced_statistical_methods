@@ -75,10 +75,9 @@ df_mat <- haven::read_sav('../data/materalism_and_personality/Study_III.sav') %>
     life_satisfaction = swls
   ) %>%
   # limit to used columns
-  select(
+  dplyr::select(
     gender, marital_status, materialism, neuroticism, life_satisfaction
   )
-  
 ```
 
 Take a look at data to see how it is structured
