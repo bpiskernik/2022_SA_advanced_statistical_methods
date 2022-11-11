@@ -1,0 +1,138 @@
+---
+title: "Nested Data - Homework"
+author: "please insert your names here"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Tasks
+
+due till 2022-12-08
+
+Use the data from the article [Determinants of healthcare worker turnover in intensive care units: A micro-macro multilevel analysis](https://doi.org/10.1371/journal.pone.0251779) by Daouda, Hocine & Temime (2021).
+
+**Test the hypotheses:**
+
+The stress level is affected by:
+
+**H1**: L1 variable `support from supervisors`
+
+**H2**: L2 variable `staff-to-patient ratio day`
+
+Tip: you can reuse code from code that generated today's slides
+# Preparations
+
+## Libraries
+
+Load required libraries
+
+```{r load_libraries, message=FALSE}
+# just run this chunk
+
+library(tidyverse)
+library(magrittr)
+library(plotly)
+library(kableExtra)
+library(datapasta)
+library(lme4)
+library(lmeresampler)
+```
+
+
+## Data
+
+1. get the files
+  -  [Individual-level factors data](https://doi.org/10.1371/journal.pone.0251779.s010)
+  - [Intensive care unit-level factors data](https://doi.org/10.1371/journal.pone.0251779.s011)
+2. add the folder `/journal.pone.0251779` into `/data` and copy both files into it
+
+
+# Task
+
+## Prep
+
+Get data into shape.
+
+```{r prepare_data}
+# just run this chunk
+
+df_individual <- read_csv2('../data/journal.pone.0251779/journal.pone.0251779.s010.csv')
+df_unit <- read_csv2('../data/journal.pone.0251779/journal.pone.0251779.s011.csv')
+
+df_ICU <- df_individual %>%
+  left_join(df_unit) %>%
+  mutate(
+    CodeService = as_factor(CodeService),
+    `type of ICU` = as_factor(`type of ICU`)
+    )
+```
+
+Take a look at data to see how it is structured
+
+```{r see_data}
+# just run this chunk
+
+df_ICU %>%
+  # limit to top 20 rows
+  slice_head(n=20)
+```
+
+## Optional
+
+Explore the data (this is optional for the homework).
+
+```{r}
+# ADD YOUR CODE
+
+
+```
+
+## Test **H1** and **H2**.
+
+Tip 1: you will need `lme4::lmer()` models
+Tip 2: you can use the code from the lecture as a starting point.
+
+
+```{r}
+# ADD YOUR CODE
+
+```
+
+
+```{r}
+# ADD YOUR CODE
+
+```
+
+
+```{r}
+# ADD YOUR CODE
+
+```
+
+... add more code chunks as needed.
+
+
+### Question
+
+Please report your results.
+
+
+### Answer
+
+[YOUR ANSWER]
+
+
+
+# At last
+
+* check that you have
+  * added your name at the top of the document as author
+  * added all missing code segments
+  * answered all questions
+* knit to PDF or HTML
+* upload to moodle

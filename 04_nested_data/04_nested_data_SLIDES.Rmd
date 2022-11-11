@@ -17,6 +17,7 @@ library(plotly)
 library(kableExtra)
 library(datapasta)
 library(lme4)
+library(lmeresampler)
 options(warn=-1)
 options("kableExtra.html.bsTable" = T)
 theme_set(theme_minimal())
@@ -34,16 +35,15 @@ df_individual <- read_csv2('../data/journal.pone.0251779/journal.pone.0251779.s0
 df_unit <- read_csv2('../data/journal.pone.0251779/journal.pone.0251779.s011.csv')
 
 df_ICU <- df_individual %>%
-  left_join(df_unit)
+  left_join(df_unit) %>%
+  mutate(
+    CodeService = as_factor(CodeService),
+    `type of ICU` = as_factor(`type of ICU`)
+    )
 ```
 
-```{r}
-df_individual
-```
 
-```{r}
-df_unit
-```
+
 
 ## The Basic Problem {.build}
 
@@ -184,5 +184,300 @@ This is a complex question (e.g., see [Hofman & Gavin (1998)](https://doi.org/10
   - L1 association between $X$ and $Y$ is of substantive interest
   - cross-level interactions and L1 interactions
   
-**Correct centering depends solely on your question!** Use different centerings for different questions (even in 1 analyses block).
+**Correct centering depends solely on your question!** Use different centerings for different questions (even in 1 analysis block).
 
+
+## Let's look at a practical example {.build .smaller}
+
+We will use data from the article [Determinants of healthcare worker turnover in intensive care units: A micro-macro multilevel analysis](https://doi.org/10.1371/journal.pone.0251779) by Daouda, Hocine & Temime (2021).
+
+Variables:
+
+* `stress level` ... DV (nurse's reported stress level)
+* `support from colleagues` ... L1 IV (per nurse)
+* `type of ICU` ... L2 IV (per unit)
+
+To disentangle L1 and L2 effect of `support from colleagues` we will _group mean center_ it and also use its _group means_ as a predictor.
+
+So, instead of `support from colleagues` we will use:
+
+* `support_l1`
+* `support_l2`
+
+Further, `support_l2` will be _grand mean centered_.
+
+```{r group_mean_centering, include=FALSE}
+df_ICU <- df_ICU %>%
+  group_by(CodeService) %>% # CodeService = unit id
+  mutate(support_l2 = mean(`support from colleagues`, na.rm=TRUE)) %>%
+  ungroup() %>%
+  mutate(
+    # create support_l1
+    support_l1 = `support from colleagues` - support_l2,
+    # grand mean center rest of the variables
+    across(all_of(c('support_l2')), scale, scale=FALSE)
+  )
+```
+
+
+## Inital exploratory analyses {.build}
+
+Things you know from previous sessions:
+
+* skim through the data
+* univariate summaries (numerical + graphical)
+* bivariate summaries (numerical + graphical)
+* bivariate summaries faceted/grouped by higher level units
+
+## Example of bivariate summaries faceted/grouped by higher level units
+
+```{r, echo=FALSE, message=FALSE}
+df_ICU %>% 
+  ggplot(aes(y=`stress level`, x=support_l1)) +
+  geom_point(aes(alpha=0.3, size=support_l2, color=`type of ICU`)) +
+  geom_smooth(method = "lm", color='red') +
+  facet_wrap(vars(CodeService))
+
+```
+
+## Model Building Strategy {.build .smaller}
+
+* start simple (establish a baseline for evaluating larger models)
+* add covariates one at a time, level by level, maybe centering certain variables
+* finally, examine the random effects and variance components, beginning with a full set of error terms and then removing covariance terms and variance terms where advisable (for instance, when parameter estimates are failing to converge or producing impossible or unlikely values) 
+
+This strategy follows closely [Raudenbush & Bryk (2002)](https://us.sagepub.com/en-us/nam/hierarchical-linear-models/book9230) approach.
+
+Other strategies are possible. E.g., [Diggle et al. (2002)](https://global.oup.com/academic/product/analysis-of-longitudinal-data-9780199676750?cc=at&lang=en&) begins with a saturated fixed effects model, determines variance components based on that, and then simplifies the fixed part of the model after fixing the random part.
+
+
+
+
+## Digression: Random vs. Fixed Effects {.build .smaller}
+
+**fixed effects**
+
+* levels of a factor we want to draw inferences from
+* would not change in replications of the study
+* e.g., `type of ICU`
+
+**random effects**
+
+* levels of a factor which is just a sample from a larger population of factor levels
+* not interested in drawing conclusions about specific levels
+* but, interested in accounting for the influence of the random effect
+* e.g., specific unit
+
+
+
+## An Initial Model: Random Intercepts {.build .smaller .columns-2}
+
+* no predictors at either level
+* assess variation at each level
+
+```{r model_0 Random Intercepts, class.source='bottomMargin-10'}
+model_0 <- lmer(`stress level` ~ 
+  1+(1|CodeService), REML=T, data=df_ICU)
+```
+```{r model_0 print, echo=FALSE, message=FALSE, class.source='bottomMargin-10'}
+summary(model_0)
+```
+
+* $\hat{\alpha}_0=22.66$ = est. mean stress level across all units
+* $\hat{\sigma}²=21.73$ = est. variance in within-units deviations
+* $\hat{\sigma}_{u}^{2}=0.79$ = est. variance in between-units deviations
+
+**intraclass correlation coefficient (ICC)**
+
+$\hat{\rho}=\frac{\hat{\sigma}_{u}^{2}}{\hat{\sigma}_{u}^{2}+\hat{\sigma}²}$ = `r round(0.7933/(0.7933+22.66),3)`
+
+`r round(0.7933/(0.7933+22.66),3)*100`% of the total stress level variability are attributable to differences among units.
+
+As $\rho$ approaches 0, nurses stress levels are essentially independent. The **effective sample size** is close to number of nurses. As $\rho$ approaches 1, all stress levels of all nurses in one unit become equal. The **effective sample size** is close to number of units.
+
+
+## Digression: Model estimation {.build }
+
+In multilevel models, parameters are estimated with likelihood-based methods (instead of OLS). The most common methods are:
+
+* maximum likelihood (ML)
+* restricted maximum likelihood (REML)
+
+REML accounts for loss in degrees of freedom from fixed effects estimation, and provides an unbiased estimate of variance components. Therefore, it is preferable in most cases.
+
+ML should be used if nested **fixed** effects models are being compared using a likelihood ratio test (nested random are fine with REML).
+
+If you want to know more about this topic, then take a look at [Singer & Willet (2003)](https://academic.oup.com/book/41753).
+
+
+## Random Slopes and Intercepts Model {.build .smaller .reduceTopMarginCode .columns-2}
+
+```{r model_1, class.source='bottomMargin-10'}
+model_1<-lmer(`stress level` ~ support_l1+
+  (support_l1|CodeService), REML=T, data=df_ICU)
+```
+```{r model_1 print, echo=FALSE, message=FALSE, class.source='bottomMargin-10'}
+summary(model_1)
+```
+
+- $\hat{\alpha}_{0}=22.6$ ... mean stress level at mean `support_l1` 
+- $\hat{\beta}_{0}=-0.007$ ... mean decrease of stress level if `support_l1` increases by 1
+- $\hat{\sigma}^2=21.2$ ... variance in within-unit deviations
+- $\hat{\sigma}_{u}^{2}=0.85$ ... variance in between-units deviations
+- $\hat{\sigma}_{v}^{2}=0.19$ ... variance in between-`support_l1` deviations
+- $\hat{\rho}_{uv}=-0.45$ ... correlation of unit intercept and `support_l1`
+
+## Visualization of model_1
+
+```{r, echo=FALSE, message=FALSE}
+ints_1 = fixef(model_1)[1] + ranef(model_1)[[1]][1]
+slopes_1 = fixef(model_1)[2] + ranef(model_1)[[1]][2]
+model_1.plot = data.frame(unit = levels(df_ICU$CodeService),
+                         ints_1 = ints_1[[1]],
+                         slopes_1 = slopes_1[[1]])
+
+p <- ggplot() +  
+  geom_abline(data = model_1.plot, 
+              aes(intercept = ints_1, slope = slopes_1, color = unit)) +
+  geom_abline(aes(intercept = fixef(model_1)[1],
+                  slope = fixef(model_1)[2]), size = 1) +
+  scale_x_continuous(name = "support_l1", limits = c(-6,6)) +
+  scale_y_continuous(name="stress level", limits = c(15,30))  
+  
+ggplotly(p) #%>%
+  #config(displayModeBar = FALSE)
+```
+
+
+## Digression: Parameter tests {.build .smaller}
+
+Getting p-values in multilevel models is not trivial, because the exact distribution of the test statistics under the null hypothesis (no fixed effect) is unknown [(Bates et al. 2015)](https://www.jstatsoft.org/v067/i01). 
+
+Approaches:
+
+* t-values (ratios of parameter estimates to estimated standard errors) with absolute value above 2 indicate significant evidence that a particular model parameter is different than 0
+* tests based on conservative assumptions, large-sample results, or approximate degrees of freedom for a t-distribution
+* bootstrap, e.g.,
+  + parametric [(Efron, 2012)](https://doi.org/10.1214/12-AOAS571)
+  + residual [(Carpenter, Goldstein and Rasbash, 2003)](https://doi.org/10.1111/1467-9876.00415)
+  + wild[(Modugno and Giannerini, 2015)](https://doi.org/10.1080/03610926.2013.802807)
+
+## Example: Parametric Bootstrap
+
+The parametric bootstrap simulates bootstrap samples from the estimated distribution functions. That is, error terms and random effects are simulated from their estimated normal distributions and are combined into bootstrap samples via the fitted model equation.
+
+```{r, cache=TRUE}
+boot_model_1 <- lmeresampler::bootstrap(
+  model_1, .f = fixef, type = "parametric", B = 1000)
+confint(boot_model_1, type = "perc")
+```
+
+## Add level 2 predictor {.build .smaller .columns-2}
+
+```{r model_2, class.source='bottomMargin-5'}
+model_2<-lmer(`stress level`~support_l1+support_l2+
+  (support_l1|CodeService), REML=T, data=df_ICU)
+```
+```{r model_2 print, echo=FALSE, message=FALSE, class.source='bottomMargin-10'}
+summary(model_2)
+```
+
+
+Like `support_l1`, increase of `support_l2` slightly reduces the stress level (-0.15), however, both effects are not significant (not tested, but | _t_ | is far away from 2)
+
+
+## Add second level 2 predictor {.build .smaller}
+
+```{r model_3, class.source='bottomMargin-5'}
+model_3 <- lmer(`stress level` ~ `type of ICU` + support_l1 + support_l2 +
+  (support_l1 | CodeService), REML=T, data=df_ICU)
+
+model_3_ML <- lmer(`stress level` ~ `type of ICU` + support_l1 + support_l2 +
+  (support_l1 | CodeService), REML=F, data=df_ICU)
+```
+```{r model_3 print, echo=FALSE, message=FALSE, class.source='bottomMargin-10'}
+VCrandom <- VarCorr(model_3)
+print(VCrandom, comp = c("Variance", "Std.Dev."))
+cat(" Number of Level Two groups = ",
+    summary(model_3)$ngrps)
+coef(summary(model_3))
+```
+
+Neither, _ICU Type 1_ or _2_ seem to differ significantly from _Type 0_. But it seems like _1_ and _2_ could differ.
+
+How would we test that?
+
+
+## Try to simplify model_3 by removing random slope
+
+```{r model_4, class.source='bottomMargin-5'}
+model_4 <- lmer(`stress level` ~ `type of ICU` + support_l1 + support_l2 +
+  (1 | CodeService), REML=T, data=df_ICU)
+
+model_4_ML <- lmer(`stress level` ~ `type of ICU` + support_l1 + support_l2 +
+  (1 | CodeService), REML=F, data=df_ICU)
+```
+```{r model_4 print, echo=FALSE, message=FALSE, class.source='bottomMargin-10'}
+VCrandom <- VarCorr(model_4)
+print(VCrandom, comp = c("Variance", "Std.Dev."))
+cat(" Number of Level Two groups = ",
+    summary(model_4)$ngrps)
+coef(summary(model_4))
+```
+
+## Compare model_3 and model_4 (1/2){.build}
+
+Information criteria like AIC and BIC can be used to compare nested and not nested models (smaller is better).
+
+Likelihood ratio tests can be used for nested models.
+
+**Are model_3 and model_4 nested?**
+
+```{r, class.source='bottomMargin-5'}
+anova(model_4, model_3, test='Chisq')
+```
+
+## Compare model_3 and model_4 (2/2){.build .smaller}
+
+Let's try bootstrapped likelihood ratio test (BLRT).
+
+```{r, class.source='bottomMargin-5', cache=TRUE}
+b3 <- lmeresampler::bootstrap(model_3_ML, .f = logLik, type = "parametric", B = 1000)
+b4 <- lmeresampler::bootstrap(model_4_ML, .f = logLik, type = "parametric", B = 1000)
+lrt_b <- -2 * b4$replicates + 2 * b3$replicates
+quantile(lrt_b, probs = c(.025, .975))
+```
+CI does include 0 -> no model is significantly better.
+
+-> ICs indicate better fit of `model_4` and, although more parsimonious, it doesn't fit the data significantly worse than `model_3`.
+
+If your theory doesn't emphasize the random slope, than just the random intercept seems to be sufficient.
+
+**Always pick the model that fits your theory**. 
+
+_Note_: Theory is fixed before the analysis.
+
+
+## Homework (graded) | due till 2022-12-08   {.flexbox .vcenter}
+
+Use the data from the article [Determinants of healthcare worker turnover in intensive care units: A micro-macro multilevel analysis](https://doi.org/10.1371/journal.pone.0251779) by Daouda, Hocine & Temime (2021).
+
+**Test the hypotheses:**
+
+The stress level is affected by:
+
+**H1**: L1 variable `support from supervisors`
+
+**H2**: L2 variable `staff-to-patient ratio day`
+
+Tip: you can reuse code from code that generated today's slides
+
+
+
+## Thank you for your attention! {.flexbox .vcenter}
+
+Next Time (2022-12-15):
+
+**Missing Data**
+
+_Note:_ There will be just one "your pick"-session, because homework was more work than I have expected at the start of the semester.
