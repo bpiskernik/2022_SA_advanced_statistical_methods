@@ -360,7 +360,7 @@ Approaches:
 * bootstrap, e.g.,
   + parametric [(Efron, 2012)](https://doi.org/10.1214/12-AOAS571)
   + residual [(Carpenter, Goldstein and Rasbash, 2003)](https://doi.org/10.1111/1467-9876.00415)
-  + wild[(Modugno and Giannerini, 2015)](https://doi.org/10.1080/03610926.2013.802807)
+  + wild [(Modugno and Giannerini, 2015)](https://doi.org/10.1080/03610926.2013.802807)
 
 ## Example: Parametric Bootstrap
 
@@ -408,7 +408,7 @@ Neither, _ICU Type 1_ or _2_ seem to differ significantly from _Type 0_. But it 
 How would we test that?
 
 
-## Try to simplify model_3 by removing random slope
+## Try to simplify model_3 by removing random slope {.smaller}
 
 ```{r model_4, class.source='bottomMargin-5'}
 model_4 <- lmer(`stress level` ~ `type of ICU` + support_l1 + support_l2 +
