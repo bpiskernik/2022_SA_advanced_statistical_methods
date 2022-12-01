@@ -313,7 +313,7 @@ FIML (full information maximum likelihood)
 Pairwise deletion
 
   - different analyses use different samples (what's the sample size?)
-  - indefinite correlation matrix
+  - biased results if not MCAR & indefinite correlation matrix
   
 Single imputation
 
