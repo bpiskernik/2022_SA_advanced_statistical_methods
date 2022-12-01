@@ -1,0 +1,336 @@
+---
+title: "Mi&nbsp;sing D&nbsp;ta"
+author: "Be&nbsp;nhard Pisk&nbsp;&nbsp;&nbsp;&nbsp;k"
+date: "2022-12-15"
+output: 
+  ioslides_presentation:
+        css: ../style.css
+        incremental: true
+        self_contained: true
+---
+
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(magrittr)
+library(plotly)
+library(kableExtra)
+options(warn=-1)
+options("kableExtra.html.bsTable" = T)
+theme_set(theme_minimal())
+```
+
+```{r helper, include=FALSE}
+toTable <- function(df){
+  df %>% kable() %>% kable_styling()
+  }
+```
+
+```{r data_load, include=FALSE}
+# NOTE: we reuse the data from session 3: multiple regression
+# retrieve data of project "Materialism & personality" from https://doi.org/10.3886/E101900V1
+# attention: labels are Polish, so some transformation is necessary to facilitate work
+
+df_mat <- haven::read_sav('../data/materalism_and_personality/Study_III.sav') %>%
+  # use labels instead of values for Gender & syt_rodz
+  mutate(
+    GENDER = haven::as_factor(GENDER),
+    syt_rodz = haven::as_factor(syt_rodz),
+    # recode to English labels
+    syt_rodz = forcats::fct_recode(
+      syt_rodz,
+      'single'='osoba samotna',
+      'civil partnership'='w związku partnerskim',
+      'married'='w związku małżeńskim',
+      'other'='inne'
+      )
+    ) %>%
+  # rename columns 1: all to lower case
+  rename_all(tolower) %>%
+  # rename columns 2: use full, English words
+  rename(
+    marital_status = syt_rodz,
+    materialism = mvs_total,
+    neuroticism = neurot,
+    life_satisfaction = swls
+  ) %>%
+  # limit to used columns
+  select(
+    gender, marital_status, materialism, neuroticism, life_satisfaction
+  )
+  
+```
+
+
+
+## The Basic Problem {.build}
+
+* Missing data is usual and not an exception.
+* Usually no description, analyis, or even acknowledgment of missing data.
+* That is bad and you shouldn't do that 👨‍🏫.
+* Conclusions may (and do) change when missing data is accounted for.
+
+Consequences of missing data:
+
+* lower power
+* bigger standard errors and confidence intervals
+* biased results
+
+
+## Steps in dealing missing data {.build}
+
+1. Identify the missing data.
+2. Examine (the causes of) the missing data.
+3. Deal with the missing data.
+
+Unfortunately, (1) is the only unambiguous step.
+
+For those really interested: Check out the standard work by [Little & Rubin (2002)](https://onlinelibrary.wiley.com/doi/book/10.1002/9781119013563).
+
+
+## A classification of missing data {.build .smaller}
+
+**Missing completely at random MCAR** 
+
+* the presence of missing data on a variable is unrelated to any other observed or unobserved variable
+* easy to handle, but rare
+
+**Missing at random MAR**
+
+* the presence of missing data on a variable is related to other observed variables but **not** to its **own** unobserved value
+
+**Not missing at random NMAR**
+
+* the presence of missing data is NOT systematic or predictable using the other information we have but also isn’t missing randomly (related to its own unobserved value)
+* analysis of NMAR data is complex (and beyond the scope of this course)
+* often the best way of dealing with this is to try to collect more information about why the data is missing
+
+
+# Let's continue with an example
+
+## Data (same as in session 3){.build .smaller}
+
+Source: Górnik-Durose, Malgorzata E. Materialism & personality. Ann Arbor, MI: Inter-university Consortium for Political and Social Research [distributor], 2020-04-15. https://doi.org/10.3886/E101900V1
+
+Publication: Górnik-Durose, M. E. (2020). Materialism and well-being revisited: The impact of personality. _Journal of Happiness Studies: An Interdisciplinary Forum on Subjective Well-Being_, _21_(1), 305–326. https://doi.org/10.1007/s10902-019-00089-8
+
+The data has already some missings, but we will add an extra 10% per variable.
+
+```{r}
+set.seed(42)
+mr <- 0.1
+df <- purrr::map_df(df_mat, function(x) 
+  {x[sample(c(TRUE, NA), prob = c(1-mr, mr), size = length(x), replace = TRUE)]})
+df %>% head()
+```
+
+# 1. Identify the missing data.
+
+## Tabular {.smaller}
+
+```{r, message=FALSE, results='hide'}
+dv = 'life_satisfaction'
+iv = c('gender', 'marital_status', 'materialism', 'neuroticism')
+df %>% finalfit::ff_glimpse(dv, iv)
+```
+
+```{r, echo=FALSE}
+ffg <- df %>% finalfit::ff_glimpse(dv, iv)
+ffg$Continuous %>% toTable()
+```
+
+```{r, echo=FALSE}
+ffg$Categorical %>% toTable()
+```
+
+## Graphical
+
+```{r}
+df %>% finalfit::missing_plot() %>% ggplotly()
+```
+
+# 2. Examine (the causes of) the missing data.
+
+## Things you want to answer
+
+* What percentage of the data is missing?
+* Are the missing data concentrated in a few variables or widely distributed?
+* Do the missing values appear to be random?
+* Does the covariation of missing data with each other or with observed data suggest a possible mechanism that’s producing the missing values?
+
+
+## Visual Patterns {.smaller}
+
+```{r}
+df %>% VIM::aggr(prop=FALSE, numbers=TRUE, cex.axis=.7 )
+```
+
+## Visual Patterns
+
+* Are any variables or variable combinations missing more often?
+* Is there something special about them?
+  - sensitive data
+  - procedure (e.g. at the end of long questionnaire)
+  - ...
+  
+  
+## Associations between missing and observed data (graphical) {.smaller .reduceTopMarginCode}
+
+```{r, message=FALSE, warning=FALSE}
+df %>% finalfit::missing_pairs(dv, iv)
+```
+
+## Associations between missing and observed data (numerical) {.smaller}
+
+```{r, eval=FALSE}
+df %>% finalfit::missing_compare(dv, iv)
+```
+
+
+```{r, echo=FALSE}
+df %>% 
+  finalfit::missing_compare(dv, iv) %>% 
+  toTable()
+```
+
+Take _p_-values with a grain of salt ($\alpha$-inflation, not necessarily adequate test).
+
+## Omnibus test for testing MCAR {.build}
+
+[Little's (1988)](https://doi.org/10.1080/01621459.1988.10478722) test statistic assesses if data is missing completely at random (MCAR). The null hypothesis in this test is that the data is MCAR, and the test statistic is a chi-squared value.
+
+```{r}
+naniar::mcar_test(df)
+```
+
+Rather rely on your understanding of the mechanism causing missings than on this test to decide whether your data is MCAR.
+
+
+# 3. Deal with the missing data.
+
+## Approaches
+
+* rational
+* complete-case analysis (listwise deletion)
+* multiple imputation
+* other approaches
+  - FIML
+  - pairwise deletion
+  - single imputation
+  - simple (nonstochastic) imputation
+  - ...
+  
+  
+## Rational approach
+
+* use mathematical or logical relationships among variables to attempt to fill in or recover missing value
+* e.g.: gender from first name, age from birth year, income from job, ...
+* typically requires creativity and thoughtfulness
+* data recovery may be exact or approximate
+
+
+## Complete-case analysis (listwise deletion)
+
+* default in most software packages (most often used)
+* if MCAR unbiased, but smaller sample size with all consequences (reduces statistical power)
+* if not MCAR biased/skewed results
+
+
+## Multiple imputation
+
+* 3 steps: 
+  - **impute**: distributions of the missing values are estimated (via regression techniques) and drawing from them multiple complete data sets (10-20 are typical) are created
+  - **analyze**: analysis is done with each data set
+  - **pool**: results from all data sets are pooled
+* frequently the method of choice for complex missing-values problems
+
+## Multiple imputation - Tips
+
+* keep auxiliary variables (neither DV nor IV) in data set (might help predict the missing values) 
+* don't be fancy: impute your DV and also keep it in the analysis (see [Kontopantelis et al., 2017](https://doi.org/10.1186/s12874-016-0281-5))
+* double check the scale of your variables and use adequate regression technique (are categorical defined as categorical?)
+
+## Multiple imputation - Impute {.build .smaller}
+
+
+
+```{r, results='hide'}
+imp <- mice::mice(df, m = 5, seed = 42) # use m=20
+```
+
+```{r}
+summary(imp)
+```
+
+
+## Multiple imputation - Analyze {.build .smaller}
+
+```{r}
+fit_mi <- with(imp, lm(life_satisfaction ~ neuroticism + materialism + marital_status))
+```
+
+```{r, echo=FALSE}
+map(fit_mi$analyses, function(x) x$coefficients) %>% bind_rows() %>% toTable()
+```
+
+
+## Multiple imputation - Pool {.build .smaller}
+
+```{r}
+fit_mi %>% mice::pool() %>% summary()
+```
+
+## Combine bootstrapping with MI {.build .smaller .reduceTopMarginText}
+
+create bootstrapped & MI data sets - Number of data sets = nBoot*nImp
+
+```{r, eval=FALSE, class.source='bottomMargin-5'}
+boot_imp <- bootImpute::bootMice(df, nBoot=100, nImp=5, seed=42) # use >= 1000 & 20
+```
+
+```{r, cache=TRUE, results='hide', echo=FALSE, message=FALSE, warning=FALSE}
+boot_imp <- bootImpute::bootMice(df, nBoot=100, nImp=5, nCores=4, seed=42, printFlag=FALSE) # use >= 1000 & 20
+```
+
+analyze and pool
+
+```{r, class.source='bottomMargin-5'}
+# wrapper to analyze a data set
+get_coefficients <- function(df) {
+  coef(lm(life_satisfaction ~ neuroticism + materialism + marital_status, df))}
+fit_boot_mi <- bootImpute::bootImputeAnalyse(boot_imp, get_coefficients)
+```
+
+For more information see e.g. [Bartlett and Hughes (2020)](https://doi.org/10.1177/0962280220932189).
+
+## Other approaches {.build .smaller .reduceTopMarginText}
+
+FIML (full information maximum likelihood)
+
+- equivalent results to MI (see e.g. [Li & Shi, 2021](https://doi.org/10.1037/met0000381))
+- only within structural equation modeling
+
+Pairwise deletion
+
+  - different analyses use different samples (what's the sample size?)
+  - indefinite correlation matrix
+  
+Single imputation
+
+  - = MI with m=1 (no pooling)
+  - underestimates Standard Errors
+
+Simple (nonstochastic) imputation
+
+  - one value for all
+  - e.g. mean or median for continuous variables
+  - own missing class for categorical variables
+  - biased results if not MCAR
+  - underestimates SEs (too little variance in the sample)
+  
+## Training task (not graded) {.flexbox .vcenter}
+
+* Repeat today's analysis, but with increase additional missing rate from 10 to 25%
+* What do you notice?
+
+## Thank you for your attention! {.flexbox .vcenter}
