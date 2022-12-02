@@ -1,0 +1,164 @@
+---
+title: "Multiple Regression - Homework"
+author: "please insert your names here"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Tasks
+
+due till 2022-11-10
+
+* use the data, research question and variables from the lecture on _multiple regression_
+* build a _robust_ model (without interaction) using the function `MASS::rlm()`
+* describe the differences you see compared to _model4_
+
+# Preparations
+
+## Libraries
+
+Load required libraries
+
+```{r load_libraries}
+# just run this chunk
+
+library(tidyverse)
+library(MASS)
+library(rsample)
+library(sfsmisc)
+```
+
+
+## Data
+
+1. Create an account at [openicpsr](https://www.openicpsr.org/) to get access to the data.
+2. Make sure that the [Materialism & personality](https://doi.org/10.3886/E101900V1) data-set is extracted at _[your individual folder path]/2022_SA_advanced_statistical_methods/data_.
+
+
+# Task
+
+## Prep
+
+Get data into shape.
+
+```{r prepare_mosaich_data}
+# just run this chunk
+
+# retrieve data of project "Materialism & personality" from https://doi.org/10.3886/E101900V1
+# attention: labels are Polish, so some transformation is necessary to facilitate work
+
+df_mat <- haven::read_sav('../data/materalism_and_personality/Study_III.sav') %>%
+  # use labels instead of values for Gender & syt_rodz
+  mutate(
+    GENDER = haven::as_factor(GENDER),
+    syt_rodz = haven::as_factor(syt_rodz),
+    # recode to English labels
+    syt_rodz = forcats::fct_recode(
+      syt_rodz,
+      'single'='osoba samotna',
+      'civil partnership'='w związku partnerskim',
+      'married'='w związku małżeńskim',
+      'other'='inne'
+      )
+    ) %>%
+  # rename columns 1: all to lower case
+  rename_all(tolower) %>%
+  # rename columns 2: use full, English words
+  rename(
+    marital_status = syt_rodz,
+    materialism = mvs_total,
+    neuroticism = neurot,
+    life_satisfaction = swls
+  ) %>%
+  # limit to used columns
+  dplyr::select(
+    gender, marital_status, materialism, neuroticism, life_satisfaction
+  )
+```
+
+Take a look at data to see how it is structured
+
+```{r see_mosaich_data}
+# just run this chunk
+
+df_mat %>%
+  # limit to top 20 rows
+  slice_head(n=20)
+```
+
+## Optional
+
+Explore the data (this is optional for the homework). Tip you can use the code from the lecture as a starting point.
+
+```{r}
+# ADD YOUR CODE
+
+
+```
+
+## Model 4
+
+Model 4 used standardized variables, so we need to standardize all numeric variables.
+
+
+```{r standardize}
+# just run this chunk
+df_z <- df_mat %>% mutate_if(is.numeric, scale)
+```
+
+Now, we can create _Model 4_
+
+```{r}
+# just run this chunk
+model4 <- lm(life_satisfaction ~ neuroticism + materialism + marital_status, data = df_z)
+
+summary(model4)
+```
+
+## Robust with weighted least squares
+
+Now it is your turn to build a _robust_ model using the function `MASS::rlm()`
+
+```{r rlm}
+# ADD YOUR CODE
+set.seed(42)
+model4_bt<- df_z %>% 
+  rsample::bootstraps(1000) %>% 
+  pull(splits) %>% 
+  map_dfr(~rlm(life_satisfaction ~ neuroticism + materialism + marital_status, data = .)%>% 
+            broom::tidy())
+model4_bt %>% 
+  group_by(term) %>% 
+  dplyr::summarize(est_mean = mean(estimate),
+    est_median = median(estimate),
+    low=quantile(estimate, .025),
+    high=quantile(estimate, .975))
+```
+
+
+_Note_: `rlm()` objects do not include p-values. You can get those, e.g., by bootstrapping or with the function `sfsmisc::f.robftest()` 
+
+
+### Question
+
+1. describe the differences you see compared to _model4_er?
+
+
+### Answer
+
+1. There are hardly any. The parameters are very similar and the same parameter are significant/not significant. This indicates that the OLS assumptions are met.
+
+
+
+# At last
+
+* check that you have
+  * added your name at the top of the document as author
+  * added all missing code segments
+  * answered all questions
+* knit to PDF or HTML
+* upload to moodle
