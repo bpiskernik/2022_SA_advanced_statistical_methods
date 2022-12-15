@@ -1,0 +1,132 @@
+---
+title: "Mi&nbsp;sing D&nbsp;ta"
+author: "please insert your names here"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+# Training task (not graded)
+
+* Repeat today's analysis, but with increase additional missing rate from 10 to 25%
+* What do you notice?
+
+The next few code chunks load the required packages and the data, and create 25% missingness.
+
+The rest is up to you. Try it yourself - if it doesn't work you can copy & paste from the session's rmd-file (no adjustments are needed, because only the missing percentage was increased). But if you use c&p - think about what each code chunk does!
+
+```{r setup}
+# just run this chunk
+library(tidyverse)
+library(magrittr)
+library(plotly)
+library(kableExtra)
+options(warn=-1)
+options("kableExtra.html.bsTable" = T)
+theme_set(theme_minimal())
+```
+
+
+```{r data_load}
+# just run this chunk
+
+# NOTE: we reuse the data from session 3: multiple regression
+# retrieve data of project "Materialism & personality" from https://doi.org/10.3886/E101900V1
+# attention: labels are Polish, so some transformation is necessary to facilitate work
+
+df_mat <- haven::read_sav('../data/materalism_and_personality/Study_III.sav') %>%
+  # use labels instead of values for Gender & syt_rodz
+  mutate(
+    GENDER = haven::as_factor(GENDER),
+    syt_rodz = haven::as_factor(syt_rodz),
+    # recode to English labels
+    syt_rodz = forcats::fct_recode(
+      syt_rodz,
+      'single'='osoba samotna',
+      'civil partnership'='w związku partnerskim',
+      'married'='w związku małżeńskim',
+      'other'='inne'
+      )
+    ) %>%
+  # rename columns 1: all to lower case
+  rename_all(tolower) %>%
+  # rename columns 2: use full, English words
+  rename(
+    marital_status = syt_rodz,
+    materialism = mvs_total,
+    neuroticism = neurot,
+    life_satisfaction = swls
+  ) %>%
+  # limit to used columns
+  select(
+    gender, marital_status, materialism, neuroticism, life_satisfaction
+  )
+  
+```
+
+
+
+
+The data has already some missing, but we will add an extra 25% per variable.
+
+```{r}
+# just run this chunk
+
+set.seed(42)
+mr <- 0.25
+df <- purrr::map_df(df_mat, function(x) 
+  {x[sample(c(TRUE, NA), prob = c(1-mr, mr), size = length(x), replace = TRUE)]})
+df %>% head()
+```
+
+# Identify
+
+```{r}
+# ADD YOUR CODE
+
+```
+
+```{r}
+# ADD YOUR CODE
+
+```
+
+# Examine
+
+```{r}
+# ADD YOUR CODE
+
+```
+
+```{r}
+# ADD YOUR CODE
+
+```
+
+
+# Deal with the missing data
+
+
+```{r}
+# ADD YOUR CODE
+
+```
+
+```{r}
+# ADD YOUR CODE
+
+```
+
+# My observations if the missing-rate increases to 25%
+
+[YOUR ANSWER]
+
+
+
+# At last (optional - if you want me to take a look at it)
+
+* check that you have
+  * added your name at the top of the document as author
+  * added all missing code segments
+  * answered all questions
+* knit to PDF or HTML
+* upload to moodle

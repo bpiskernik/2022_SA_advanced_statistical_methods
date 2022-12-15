@@ -87,6 +87,8 @@ Unfortunately, (1) is the only unambiguous step.
 
 For those really interested: Check out the standard work by [Little & Rubin (2002)](https://onlinelibrary.wiley.com/doi/book/10.1002/9781119013563).
 
+For R-practitioners: freely available [Flexible Imputation of Missing Data by Stef van Buuren (2018)](https://stefvanbuuren.name/fimd/)
+
 
 ## A classification of missing data {.build .smaller}
 
@@ -333,4 +335,16 @@ Simple (nonstochastic) imputation
 * Repeat today's analysis, but with increase additional missing rate from 10 to 25%
 * What do you notice?
 
-## Thank you for your attention! {.flexbox .vcenter}
+
+## Info Homework/Exam {.flexbox .vcenter}
+
+96 vs 2 voted for a higher impact of the homework (an increase from 20 to 40%)
+
+
+# Happy holidays!
+
+The optional last session will be skipped due to no submissions.
+
+
+# Thank you for your attention!
+
