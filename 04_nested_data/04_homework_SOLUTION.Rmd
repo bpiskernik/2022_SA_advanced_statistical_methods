@@ -1,0 +1,219 @@
+---
+title: "Nested Data - Homework"
+author: "please insert your names here"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Tasks
+
+due till 2022-12-08
+
+Use the data from the article [Determinants of healthcare worker turnover in intensive care units: A micro-macro multilevel analysis](https://doi.org/10.1371/journal.pone.0251779) by Daouda, Hocine & Temime (2021).
+
+**Test the hypotheses:**
+
+The stress level is affected by:
+
+**H1**: L1 variable `support from supervisors`
+
+**H2**: L2 variable `staff-to-patient ratio day`
+
+Tip: you can reuse code from code that generated today's slides
+# Preparations
+
+## Libraries
+
+Load required libraries
+
+```{r load_libraries, message=FALSE}
+# just run this chunk
+
+library(tidyverse)
+library(magrittr)
+library(plotly)
+library(kableExtra)
+library(datapasta)
+library(lme4)
+library(lmeresampler)
+```
+
+
+## Data
+
+1. get the files
+  -  [Individual-level factors data](https://doi.org/10.1371/journal.pone.0251779.s010)
+  - [Intensive care unit-level factors data](https://doi.org/10.1371/journal.pone.0251779.s011)
+2. add the folder `/journal.pone.0251779` into `/data` and copy both files into it
+
+
+# Task
+
+## Prep
+
+Get data into shape.
+
+```{r prepare_data}
+# just run this chunk
+
+df_individual <- read_csv2('../data/journal.pone.0251779/journal.pone.0251779.s010.csv')
+df_unit <- read_csv2('../data/journal.pone.0251779/journal.pone.0251779.s011.csv')
+
+df_ICU <- df_individual %>%
+  left_join(df_unit) %>%
+  mutate(
+    CodeService = as_factor(CodeService),
+    `type of ICU` = as_factor(`type of ICU`)
+    )
+```
+
+Take a look at data to see how it is structured
+
+```{r see_data}
+# just run this chunk
+
+df_ICU %>%
+  # limit to top 20 rows
+  slice_head(n=20)
+```
+
+## Optional
+
+Explore the data (this is optional for the homework).
+
+```{r}
+# ADD YOUR CODE
+
+
+```
+
+## Test **H1** and **H2**.
+
+Tip 1: you will need `lme4::lmer()` models
+Tip 2: you can use the code from the lecture as a starting point.
+
+
+```{r}
+# ADD YOUR CODE
+df_ICU <- df_ICU %>%
+  group_by(CodeService) %>% # CodeService = unit id
+  mutate(support_l2 = mean(`support from supervisors`, na.rm=TRUE)) %>%
+  ungroup() %>%
+  mutate(
+    # create support_l1
+    support_l1 = `support from supervisors` - support_l2,
+    # grand mean center rest of the variables
+    across(all_of(c('support_l2', 'staff-to-patient ratio day')), scale, scale=FALSE)
+  )
+```
+
+
+We start by building the _random intercept model_
+
+```{r}
+# ADD YOUR CODE
+model_0<-lmer(`stress level` ~ 1+
+  (1|CodeService), REML=T, data=df_ICU,
+  control = lmerControl(optimizer ='bobyqa'))
+
+model_0 %>% summary()
+```
+Taking a look at the fixed effects, we see that the intercept (and therfore the mean reported stresslevel) is 22.7.
+
+Further, we see that the variance due to being in a specific ICU (the specific ICU is random) is small compared to the remaining variance (~ 0.8 vs 21.7). We could calculate the ICC but it probably wouldn't be large.
+
+Next, we add support_l1 (How does varying support within an ICU affect the reported stress level?)
+
+```{r}
+# ADD YOUR CODE
+model_1<-lmer(`stress level` ~ support_l1+
+  (support_l1|CodeService), REML=T, data=df_ICU, control = lmerControl(optimizer ='bobyqa'))
+
+model_1 %>% summary()
+```
+Looking at the fixed effects, we see that within ICUs an increase of support by one unit  leads to a reduction of stress by b = -0.24. Because support  was centered, the intercept hardly changes.
+
+We get the warning (not error) that the fit is singular. This happens if the variance of a random component is zero or close to zero. In this case the culprit is `support_l1`.
+
+You can either remove the random part right now, or keep it (and remove it later if it is not an essential part of one of your hypotheses). I will keep it for now, because with the addition of further L1 predictors (we don't have any) the variance could increase.
+
+In the next step we add `support_l2` (Does the mean support of the ICU affect the individually reported stress levels?)
+
+```{r}
+# ADD YOUR CODE
+model_2<-lmer(`stress level`~support_l1+support_l2+
+  (support_l1|CodeService), REML=T, data=df_ICU, control = lmerControl(optimizer ='bobyqa'))
+
+model_2%>% summary()
+```
+Being in a ICU with mean support that is one unit greater means b=-0.49 units lower stress levels on average for the nurses in this ICU (`support_l2`).
+
+When considering `support_l2` the effect of `support_l2` diminishes a little. Using the |2| threshold it would no longer be significant. But we will only use the final model for evaluating the significance.
+
+Next, we add the L2 predictor `staff-to-patient ratio day`.
+
+```{r}
+# ADD YOUR CODE
+model_3<-lmer(`stress level`~support_l1+support_l2+`staff-to-patient ratio day`+
+  (support_l1|CodeService), REML=T, data=df_ICU, control = lmerControl(optimizer ='bobyqa'))
+
+model_3 %>% summary()
+```
+We see that the greater the `staff-to-patient ratio day` per ICU is, the greater the reported stress level is (more patients for fewer nurses increases the stress for the nurses).
+
+Now, we have added all our hypothesized predictors but there are still things we can tweak on our model. In general, if your hypotheses don't require them, it is a good idea to check if the random components are necessary. In this case we have just one and it is singular, so removing it will probably not negatively impact our model.
+
+```{r}
+# ADD YOUR CODE
+model_4<-lmer(`stress level`~support_l1+support_l2+`staff-to-patient ratio day`+
+  (1|CodeService), REML=T, data=df_ICU, control = lmerControl(optimizer ='bobyqa'))
+
+model_4 %>% summary()
+```
+
+`model_4`, without the random slope for `support_l1` looks good at first glance (no more warnings) and the results are quite similar to `model_3`. If it does not fit the data worse than `model_3`, we should choose it as our final model because it is more parsimonious.
+
+```{r}
+anova(model_4, model_3, test='Chisq')
+```
+
+The information critera AIC and BIC both favor `model_4` and the Likelihood ratio tests indicates that `model_4` does not fit the data worse (X²(2) = 1.12; p = 0.57) than `model_3` although it has fewer parameter.
+
+We could also bootstrap the LRT-test, but the result is unambiguous so we will skip that.
+
+The last thing to do is to check our results for significance. Given that the _t_-values are all close to the critical value of |2|, I will use bootstrapping to be on the save side.
+
+```{r}
+boot_model_4 <- lmeresampler::bootstrap(
+  model_4, .f = fixef, type = "parametric", B = 1000)
+confint(boot_model_4, type = "perc")
+```
+
+
+We can accept all our hypotheses, because all p-values  are < .05.
+
+More support from supervisors by one unit reduces the reported stress within an ICU by b=-0.23 and considering the mean level of the whole ICU by b=-0.54. An increase of the staff-to-patient-ration by 1 increases the the reported stress level by 0.97 units.
+
+### Question
+
+Please report your results.
+
+
+### Answer
+
+Please see above under the code chunks.
+
+
+
+# At last
+
+* check that you have
+  * added your name at the top of the document as author
+  * added all missing code segments
+  * answered all questions
+* knit to PDF or HTML
+* upload to moodle
